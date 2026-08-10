@@ -109,6 +109,30 @@ export const quizAttempts = sqliteTable(
   ],
 )
 
+export const buzzAttempts = sqliteTable(
+  'buzz_attempts',
+  {
+    id: text('id').primaryKey(),
+    sessionId: text('session_id').notNull(),
+    questionId: text('question_id')
+      .notNull()
+      .references(() => questions.id, { onDelete: 'cascade' }),
+    quizId: text('quiz_id')
+      .notNull()
+      .references(() => quizzes.id, { onDelete: 'cascade' }),
+    guildId: text('guild_id').notNull(),
+    userId: text('user_id').notNull(),
+    isCorrect: integer('is_correct', { mode: 'boolean' }).notNull(),
+    isWinner: integer('is_winner', { mode: 'boolean' }).notNull(),
+    answeredAt: text('answered_at').notNull().default(nowIso()),
+  },
+  (table) => [
+    index('buzz_attempts_guild_user_idx').on(table.guildId, table.userId),
+    index('buzz_attempts_quiz_id_idx').on(table.quizId),
+    index('buzz_attempts_session_id_idx').on(table.sessionId),
+  ],
+)
+
 export const rateLimits = sqliteTable(
   'rate_limits',
   {

@@ -16,9 +16,20 @@ export { resolveQuizRole } from './quiz/permissions'
 export { getRandomQuestion, getPlayQuestion } from './play/getRandomQuestion'
 export { submitAttempt, type SubmitAttemptResult } from './play/submitAttempt'
 export { normalizeAnswer, isCorrectAnswer } from './play/normalizeAnswer'
+export {
+  listPlayableQuizzes,
+  getSessionQuestions,
+  type PlayableQuiz,
+} from './play/session'
 
 export { getQuizStats, type QuizStats } from './stats/quizStats'
 export { getGuildRanking, type RankingEntry, type RankingPeriod } from './stats/guildRanking'
 export { getUserStats, type UserStats } from './stats/userStats'
+export {
+  recordBuzzAttempts,
+  getBuzzRanking,
+  type BuzzAttemptRecord,
+  type BuzzRankingEntry,
+} from './stats/buzz'
 
 export { checkRateLimit, type RateLimitScope } from './rate-limit/rateLimit'
