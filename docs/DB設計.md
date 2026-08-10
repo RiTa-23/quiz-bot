@@ -122,7 +122,21 @@ Question 1---N QuizAttempt
 
 ---
 
+## 出題セッションの状態は D1 に持たない
+
+複数問セッション・早押しの進行状態（設定内容、現在の問番号、参加者スコア、早押しの締め切り状態など）は **D1 ではなく Durable Object（`QuizSession`）のSQLiteストレージ**に保持する。理由と設計は [アーキテクチャ.md](./アーキテクチャ.md) の「出題セッションの状態管理」を参照。
+
+- D1 に持つのは**恒久データ**のみ（クイズ本体・設問・共有・編集者・回答記録・レート制限）
+- DO が持つのは**セッション進行中の一時状態**のみ。セッション終了後は破棄してよい
+- 恒久的な回答記録が必要な場合は、DOから `packages/core` 経由で D1 の `quiz_attempts` に書く（DOのSQLiteに記録を残すのではない）
+- したがって本セクションのD1テーブル定義に、セッション用テーブルは追加しない
+
+DO内SQLiteのスキーマ（`QuizSession` が内部で持つテーブル）は Durable Object の実装詳細として `apps/bot` 側で定義し、本ドキュメント（D1設計）の対象外とする。
+
+---
+
 ## マイグレーション方針
 
 - Cloudflare D1 のマイグレーション機能（`wrangler d1 migrations`）を使用し、`migrations/0001_init.sql` のような連番ファイルで管理する
 - 初期マイグレーションで上記6テーブルを作成する
+- Durable Object（`QuizSession`）のSQLiteは D1 マイグレーションの対象外。DOクラスは `apps/bot` の `wrangler.jsonc` で `new_sqlite_classes` として登録する（[アーキテクチャ.md](./アーキテクチャ.md) 参照）
