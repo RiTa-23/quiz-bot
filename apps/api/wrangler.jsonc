@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quiz-bot-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-07-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "quiz-bot-db",
+      "database_id": "<D1_DATABASE_ID>",
+      "migrations_dir": "../../packages/core/migrations"
+    }
+  ],
+  "kv_namespaces": [{ "binding": "SESSIONS", "id": "<KV_NAMESPACE_ID>" }],
+  "vars": {
+    "ENVIRONMENT": "development",
+    "WEB_ORIGIN": "http://localhost:5173",
+    "DISCORD_OAUTH_REDIRECT_URI": "http://localhost:8787/auth/discord/callback"
+  }
+}

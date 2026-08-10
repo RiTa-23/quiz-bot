@@ -4,6 +4,8 @@
 
 このAPI（`apps/api`, Hono on Cloudflare Workers）は **React Web アプリ専用のHTTPインターフェース** であり、`packages/core` の共有サービス層をラップして公開するもの。Discord Bot（`apps/bot`）はこのHTTP APIを呼ばず、`packages/core` を直接importして同じロジックを利用する（詳細は [アーキテクチャ.md](./アーキテクチャ.md)）。以下のエンドポイント一覧は Web からの呼び出しのみを対象とする。
 
+**命名規則:** リクエストボディのキーは `snake_case`（Web側フォーム値との対応をわかりやすくするため）。レスポンスボディは `packages/core` の型をそのままJSON化するため `camelCase`（例: `ownerUserId`, `isCorrect`, `correctAnswers`, `totalAttempts`）。
+
 ## 認証
 
 - `GET /auth/discord` — Discord OAuth2 認可フロー開始
@@ -98,8 +100,8 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 プレビュー実行時の回答結果の記録・正誤判定（実際の出題記録は Bot 側から `packages/core` 経由で直接記録される）。
 
 - Body: `{ guild_id, user_id, submitted_answer }`
-- Response: `{ is_correct, correct_answers, explanation }`
-  - 正解発表のタイミングでのみ `correct_answers` を返す
+- Response: `{ isCorrect, correctAnswers, explanation }`
+  - 正解発表のタイミングでのみ `correctAnswers` を返す
 - 制約: 同一 `(question_id, guild_id, user_id)` で既に回答済みの場合は `409 Conflict`（1設問1回まで）
 - レート制限: 同一 `user_id` からの短時間連投は `429 Too Many Requests`
 
@@ -113,10 +115,10 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 - Response:
   ```json
   {
-    "total_attempts": 120,
-    "correct_rate": 0.62,
+    "totalAttempts": 120,
+    "correctRate": 0.62,
     "questions": [
-      { "question_id": "...", "total_attempts": 40, "correct_rate": 0.55 }
+      { "questionId": "...", "totalAttempts": 40, "correctRate": 0.55 }
     ]
   }
   ```
@@ -125,12 +127,12 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 サーバー内の正答率ランキング。
 
 - Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）
-- Response: `{ user_id, total_attempts, correct_count, correct_rate }[]`
+- Response: `{ userId, totalAttempts, correctCount, correctRate }[]`
 
 ### `GET /api/users/:userId/stats`
 ユーザー単位の解答履歴・正答率。ログインユーザー本人のみ取得可。
 
-- Response: `{ total_attempts, correct_rate, history: QuizAttempt[] }`
+- Response: `{ totalAttempts, correctRate, history: QuizAttempt[] }`
 
 ---
 
