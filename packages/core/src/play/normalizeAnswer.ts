@@ -6,9 +6,7 @@ export function normalizeAnswer(raw: string): string {
   return raw
     .trim()
     .toLowerCase()
-    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (ch) =>
-      String.fromCharCode(ch.charCodeAt(0) - 0xfee0),
-    )
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
     .replace(/　/g, ' ')
     .replace(/\s+/g, ' ')
 }

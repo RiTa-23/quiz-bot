@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { rateLimits } from '../db/schema'
@@ -37,7 +36,7 @@ export async function checkRateLimit(
 
   if (!existing) {
     await db.insert(rateLimits).values({
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       scope,
       subjectKey,
       windowStart: new Date(now).toISOString(),
@@ -53,7 +52,11 @@ export async function checkRateLimit(
   if (!withinWindow) {
     await db
       .update(rateLimits)
-      .set({ windowStart: new Date(now).toISOString(), count: 1, updatedAt: new Date(now).toISOString() })
+      .set({
+        windowStart: new Date(now).toISOString(),
+        count: 1,
+        updatedAt: new Date(now).toISOString(),
+      })
       .where(eq(rateLimits.id, existing.id))
     return
   }

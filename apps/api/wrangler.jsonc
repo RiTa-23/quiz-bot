@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "quiz-bot-api",
   "main": "src/index.ts",
-  "compatibility_date": "2026-08-01",
+  "compatibility_date": "2025-07-18",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   "d1_databases": [
@@ -13,9 +13,7 @@
       "migrations_dir": "../../packages/core/migrations"
     }
   ],
-  "kv_namespaces": [
-    { "binding": "SESSIONS", "id": "<KV_NAMESPACE_ID>" }
-  ],
+  "kv_namespaces": [{ "binding": "SESSIONS", "id": "<KV_NAMESPACE_ID>" }],
   "vars": {
     "ENVIRONMENT": "development",
     "WEB_ORIGIN": "http://localhost:5173",

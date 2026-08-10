@@ -1,7 +1,7 @@
 import { createDb, getGuildRanking, getUserStats } from '@quiz-bot/core'
 import { Hono } from 'hono'
-import { handleApiError } from '../errorHandler'
 import type { Bindings, Variables } from '../env'
+import { handleApiError } from '../errorHandler'
 import { requireAuth } from '../middleware/requireAuth'
 
 export const statsRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -23,7 +23,10 @@ statsRoutes.get('/guilds/:guildId/stats/ranking', async (c) => {
 statsRoutes.get('/users/:userId/stats', async (c) => {
   try {
     if (c.req.param('userId') !== c.get('userId')) {
-      return c.json({ error: { code: 'FORBIDDEN', message: '本人以外の統計は閲覧できません' } }, 403)
+      return c.json(
+        { error: { code: 'FORBIDDEN', message: '本人以外の統計は閲覧できません' } },
+        403,
+      )
     }
     const db = createDb(c.env.DB)
     const stats = await getUserStats(db, c.req.param('userId'))

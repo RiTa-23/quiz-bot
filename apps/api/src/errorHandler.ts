@@ -1,8 +1,8 @@
 import { AppError, type AppErrorCode } from '@quiz-bot/core'
 import type { Context } from 'hono'
-import type { StatusCode } from 'hono/utils/http-status'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
-const STATUS_BY_CODE: Record<AppErrorCode, StatusCode> = {
+const STATUS_BY_CODE: Record<AppErrorCode, ContentfulStatusCode> = {
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,

@@ -1,7 +1,6 @@
-import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
-import { quizAttempts, questions } from '../db/schema'
+import { questions, quizAttempts } from '../db/schema'
 import { conflict, notFound } from '../errors'
 import { assertCanPlay, getQuizOrThrow, resolveQuizRole } from '../quiz/permissions'
 import { checkRateLimit } from '../rate-limit/rateLimit'
@@ -58,7 +57,7 @@ export async function submitAttempt(
   const correct = isCorrectAnswer(question.type, submittedAnswer, question.answers)
 
   await db.insert(quizAttempts).values({
-    id: randomUUID(),
+    id: crypto.randomUUID(),
     questionId,
     quizId,
     guildId: actor.guildId,

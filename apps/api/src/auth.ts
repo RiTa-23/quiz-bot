@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import type { Bindings, Variables } from './env'
@@ -13,7 +12,7 @@ const DISCORD_API = 'https://discord.com/api/v10'
 export const authRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 authRoutes.get('/discord', (c) => {
-  const state = randomUUID()
+  const state = crypto.randomUUID()
   const url = new URL('https://discord.com/oauth2/authorize')
   url.searchParams.set('client_id', c.env.DISCORD_CLIENT_ID)
   url.searchParams.set('redirect_uri', c.env.DISCORD_OAUTH_REDIRECT_URI)
@@ -63,7 +62,7 @@ authRoutes.get('/discord/callback', async (c) => {
   }
   const user = (await userRes.json()) as { id: string; username: string }
 
-  const sessionId = randomUUID()
+  const sessionId = crypto.randomUUID()
   const session: SessionData = { userId: user.id, username: user.username }
   await c.env.SESSIONS.put(`session:${sessionId}`, JSON.stringify(session), {
     expirationTtl: SESSION_TTL_SECONDS,

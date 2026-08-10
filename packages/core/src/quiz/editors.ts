@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { quizEditors } from '../db/schema'
@@ -39,7 +38,7 @@ export async function addEditor(
     .limit(1)
   if (existing) throw conflict('既に編集者として登録されています')
 
-  const id = randomUUID()
+  const id = crypto.randomUUID()
   const createdAt = new Date().toISOString()
   await db.insert(quizEditors).values({
     id,

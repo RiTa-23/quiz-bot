@@ -43,7 +43,11 @@ export async function listQuizzes(
   const rows = await db
     .select()
     .from(quizzes)
-    .where(relatedIds.length > 0 ? or(...conditions, inArray(quizzes.id, relatedIds)) : or(...conditions))
+    .where(
+      relatedIds.length > 0
+        ? or(...conditions, inArray(quizzes.id, relatedIds))
+        : or(...conditions),
+    )
 
   return rows.map((row) => {
     let role: QuizRole = 'none'

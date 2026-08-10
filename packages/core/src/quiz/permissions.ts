@@ -21,11 +21,7 @@ function toQuiz(row: typeof quizzes.$inferSelect): Quiz {
  * 要件定義.md の権限マトリクスに基づき actor のロールを解決する。
  * owner > editor(user/guild指定) > shared(共有先サーバー) > none の優先順位。
  */
-export async function resolveQuizRole(
-  db: Database,
-  actor: Actor,
-  quiz: Quiz,
-): Promise<QuizRole> {
+export async function resolveQuizRole(db: Database, actor: Actor, quiz: Quiz): Promise<QuizRole> {
   if (quiz.ownerUserId === actor.userId) return 'owner'
 
   const editorRows = await db

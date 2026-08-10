@@ -18,15 +18,18 @@ import {
 } from '@quiz-bot/core'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { handleApiError } from '../errorHandler'
 import type { Bindings, Variables } from '../env'
+import { handleApiError } from '../errorHandler'
 import { requireAuth } from '../middleware/requireAuth'
 
 export const quizzesRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 quizzesRoutes.use('*', requireAuth)
 
-function actorOf(c: { get: (key: 'userId') => string; req: { query: (key: string) => string | undefined } }) {
+function actorOf(c: {
+  get: (key: 'userId') => string
+  req: { query: (key: string) => string | undefined }
+}) {
   return {
     userId: c.get('userId'),
     guildId: c.req.query('guild_id') ?? null,
@@ -235,7 +238,13 @@ quizzesRoutes.post('/:id/questions/:qid/attempts', async (c) => {
     const body = attemptSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
     const actor = { userId: c.get('userId'), guildId: body.guild_id }
-    const result = await submitAttempt(db, actor, c.req.param('id'), c.req.param('qid'), body.submitted_answer)
+    const result = await submitAttempt(
+      db,
+      actor,
+      c.req.param('id'),
+      c.req.param('qid'),
+      body.submitted_answer,
+    )
     return c.json(result)
   } catch (error) {
     return handleApiError(c, error)

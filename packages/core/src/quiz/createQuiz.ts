@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import type { Database } from '../db/client'
 import { quizzes } from '../db/schema'
 import { validationError } from '../errors'
@@ -22,7 +21,7 @@ export async function createQuiz(
     throw validationError('タイトルは必須です')
   }
 
-  const id = randomUUID()
+  const id = crypto.randomUUID()
   const now = new Date().toISOString()
 
   await db.insert(quizzes).values({

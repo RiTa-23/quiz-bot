@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { quizShares } from '../db/schema'
@@ -31,7 +30,7 @@ export async function addShare(
     .limit(1)
   if (existing) throw conflict('このサーバーには既に共有済みです')
 
-  const id = randomUUID()
+  const id = crypto.randomUUID()
   const createdAt = new Date().toISOString()
   await db.insert(quizShares).values({
     id,

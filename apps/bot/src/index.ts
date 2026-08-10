@@ -1,6 +1,6 @@
 import { AppError } from '@quiz-bot/core'
 import { DiscordHono } from 'discord-hono'
-import { handleQuizCommand, quizCommand } from './commands/quiz'
+import { handleQuizCommand } from './commands/quiz'
 import type { Bindings } from './env'
 
 const ERROR_MESSAGES: Record<AppError['code'], string> = {
@@ -12,19 +12,17 @@ const ERROR_MESSAGES: Record<AppError['code'], string> = {
   VALIDATION_ERROR: '入力内容を確認してください。',
 }
 
-async function safeHandle(handler: () => Promise<Response>): Promise<Response> {
+const app = new DiscordHono<{ Bindings: Bindings }>()
+
+app.command('quiz', async (c) => {
   try {
-    return await handler()
+    return await handleQuizCommand(c)
   } catch (error) {
     if (error instanceof AppError) {
-      return new Response(ERROR_MESSAGES[error.code] ?? error.message, { status: 200 })
+      return c.res(ERROR_MESSAGES[error.code] ?? error.message)
     }
     throw error
   }
-}
-
-const app = new DiscordHono<{ Bindings: Bindings }>()
-
-app.command(quizCommand, (c) => safeHandle(() => handleQuizCommand(c)))
+})
 
 export default app

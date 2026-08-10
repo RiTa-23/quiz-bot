@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { questions } from '../db/schema'
@@ -37,7 +36,7 @@ export async function addQuestion(
   assertCanEdit(role)
   validateQuestionInput(input, input.type)
 
-  const id = randomUUID()
+  const id = crypto.randomUUID()
   const now = new Date().toISOString()
   const choices = input.type === 'multiple_choice' ? (input.choices ?? null) : null
 
@@ -134,7 +133,5 @@ export async function deleteQuestion(
   const role = await resolveQuizRole(db, actor, quiz)
   assertCanEdit(role)
 
-  await db
-    .delete(questions)
-    .where(and(eq(questions.id, questionId), eq(questions.quizId, quizId)))
+  await db.delete(questions).where(and(eq(questions.id, questionId), eq(questions.quizId, quizId)))
 }

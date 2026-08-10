@@ -1,10 +1,7 @@
 {
   "name": "quiz-bot",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

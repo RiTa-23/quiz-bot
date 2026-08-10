@@ -2,14 +2,14 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "quiz-bot-discord",
   "main": "src/index.ts",
-  "compatibility_date": "2026-08-01",
+  "compatibility_date": "2025-07-18",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "quiz-bot-db",
-      "database_id": "<D1_DATABASE_ID>",
+      "database_id": "655f6617-5f01-48ba-975b-2be2244d8cc1",
       "migrations_dir": "../../packages/core/migrations"
     }
   ],

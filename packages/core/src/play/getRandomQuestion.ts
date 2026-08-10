@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { questions } from '../db/schema'
 import { notFound } from '../errors'
-import type { Actor, PublicQuestion, Question } from '../types'
 import { assertCanPlay, getQuizOrThrow, resolveQuizRole } from '../quiz/permissions'
 import { checkRateLimit } from '../rate-limit/rateLimit'
+import type { Actor, PublicQuestion, Question } from '../types'
 
 function toQuestion(row: typeof questions.$inferSelect): Question {
   return {
