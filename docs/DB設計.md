@@ -8,8 +8,12 @@
 Quiz 1---N Question
 Quiz 1---N QuizShare
 Quiz 1---N QuizEditor
-Question 1---N QuizAttempt
+Question 1---N QuizAttempt    （1人モードの回答記録）
+Question 1---N BuzzAttempt    （早押しモードの回答記録）
 ```
+
+- `rate_limits` はどのエンティティにも紐づかない独立テーブル
+- 出題セッションの進行状態は D1 ではなく Durable Object が持つ（本ドキュメント末尾参照）
 
 ---
 
@@ -120,6 +124,31 @@ Question 1---N QuizAttempt
 
 > 補足: D1（SQLite）はレイテンシ・書き込み特性の観点でレート制限のような高頻度更新に不向きな場合がある。実装時に Workers KV や Durable Objects への切り出しを検討する（[要件定義.md](./要件定義.md) の未確定事項参照）。
 
+### buzz_attempts（早押しモードの回答記録）
+
+早押しモードの回答結果を記録する。1人モードの `quiz_attempts` とは分離し、早押し固有の属性（セッション・勝者フラグ）を持つ（要件定義.md 2.7 参照）。`quiz_attempts` の「1設問1回」制約は適用しない（早押しは同じ設問が別セッションで再出題されうるため）。
+
+| カラム | 型 | 説明 |
+|---|---|---|
+| id | TEXT (uuid) PK | |
+| session_id | TEXT NOT NULL | 早押しセッションの識別子（Durable Object が発番） |
+| question_id | TEXT NOT NULL FK -> questions.id | |
+| quiz_id | TEXT NOT NULL FK -> quizzes.id | 集計用の非正規化カラム |
+| guild_id | TEXT NOT NULL | 出題されたサーバーID |
+| user_id | TEXT NOT NULL | 回答したユーザーID |
+| is_correct | INTEGER NOT NULL | 0/1 |
+| is_winner | INTEGER NOT NULL | 0/1。その設問を最初に正解したか（得点者。1設問につき最大1人） |
+| answered_at | TEXT NOT NULL | ISO8601 |
+
+インデックス: `(guild_id, user_id)`（早押しランキング集計）, `quiz_id`, `session_id`
+
+**統計への利用イメージ**
+- サーバー内の早押し獲得数ランキング: `SELECT user_id, SUM(is_winner) FROM buzz_attempts WHERE guild_id = ? GROUP BY user_id ORDER BY SUM(is_winner) DESC`
+- ユーザーの早押し参加数: `SELECT COUNT(*) FROM buzz_attempts WHERE user_id = ?`
+
+**記録のタイミング**
+- 早押しの進行状態そのものは Durable Object のSQLiteが持つ（[アーキテクチャ.md](./アーキテクチャ.md)）。各設問の締め切り確定時に、その設問への回答結果（勝者と、締め切りまでに回答した参加者）を DO から `packages/core` 経由で `buzz_attempts` に書き込む
+
 ---
 
 ## 出題セッションの状態は D1 に持たない
@@ -138,5 +167,6 @@ DO内SQLiteのスキーマ（`QuizSession` が内部で持つテーブル）は 
 ## マイグレーション方針
 
 - Cloudflare D1 のマイグレーション機能（`wrangler d1 migrations`）を使用し、`migrations/0001_init.sql` のような連番ファイルで管理する
-- 初期マイグレーションで上記6テーブルを作成する
+- 初期マイグレーション（`0001_init.sql`）で最初の6テーブル（quizzes / questions / quiz_shares / quiz_editors / quiz_attempts / rate_limits）を作成済み
+- `buzz_attempts` は早押し機能の実装時に後続マイグレーション（例: `0002_buzz_attempts.sql`）で追加する
 - Durable Object（`QuizSession`）のSQLiteは D1 マイグレーションの対象外。DOクラスは `apps/bot` の `wrangler.jsonc` で `new_sqlite_classes` として登録する（[アーキテクチャ.md](./アーキテクチャ.md) 参照）

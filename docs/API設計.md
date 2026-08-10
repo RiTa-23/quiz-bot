@@ -124,15 +124,21 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
   ```
 
 ### `GET /api/guilds/:guildId/stats/ranking`
-サーバー内の正答率ランキング。
+サーバー内の**1人モード**正答率ランキング（`quiz_attempts` 由来）。
 
 - Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）
 - Response: `{ userId, totalAttempts, correctCount, correctRate }[]`
 
-### `GET /api/users/:userId/stats`
-ユーザー単位の解答履歴・正答率。ログインユーザー本人のみ取得可。
+### `GET /api/guilds/:guildId/stats/buzz-ranking`
+サーバー内の**早押し**獲得数ランキング（`buzz_attempts` 由来）。1人モードとは別集計。
 
-- Response: `{ totalAttempts, correctRate, history: QuizAttempt[] }`
+- Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）
+- Response: `{ userId, winCount, answeredCount }[]`（`winCount` = 最初に正解した回数）
+
+### `GET /api/users/:userId/stats`
+ユーザー単位の解答履歴・正答率。ログインユーザー本人のみ取得可。1人モードと早押しを分けて返す。
+
+- Response: `{ solo: { totalAttempts, correctRate, history: QuizAttempt[] }, buzz: { answeredCount, winCount } }`
 
 ---
 
