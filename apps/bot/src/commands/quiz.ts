@@ -1,16 +1,8 @@
-import {
-  addEditor,
-  addQuestion,
-  addShare,
-  createDb,
-  createQuiz,
-  deleteQuiz,
-  getRandomQuestion,
-} from '@quiz-bot/core'
+import { addEditor, addQuestion, addShare, createDb, createQuiz, deleteQuiz } from '@quiz-bot/core'
 import type { CommandContext } from 'discord-hono'
 import { actorFromInteraction } from '../actor'
 import type { Bindings } from '../env'
-import { buildQuestionMessage } from '../interactions/answer'
+import { handleQuizPlay } from '../session/handlers'
 
 export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }>) {
   const v = c.var as Record<string, string | undefined>
@@ -26,10 +18,8 @@ export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }
       return c.res(`クイズを作成しました: **${quiz.title}**\nID: \`${quiz.id}\``)
     }
 
-    case 'play': {
-      const question = await getRandomQuestion(db, actor, v.quiz_id ?? '')
-      return c.res(buildQuestionMessage(question))
-    }
+    case 'play':
+      return handleQuizPlay(c)
 
     case 'delete': {
       await deleteQuiz(db, actor, v.quiz_id ?? '')

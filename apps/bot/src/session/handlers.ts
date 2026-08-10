@@ -1,0 +1,176 @@
+import type { Components } from 'discord-hono'
+import type { CommandContext, ComponentContext, ModalContext } from 'discord-hono'
+import { actorFromInteraction } from '../actor'
+import type { Bindings } from '../env'
+import { editChannelMessage } from './discordRest'
+import {
+  COUNT_INPUT,
+  FT_INPUT,
+  buildConfigPanel,
+  buildCountModal,
+  buildFreetextModal,
+  buildSessionQuestion,
+  buildSummary,
+} from './messages'
+import type { AnswerInput, AnswerOutcome, NextStep } from './types'
+
+type Ctx =
+  | CommandContext<{ Bindings: Bindings }>
+  | ComponentContext<{ Bindings: Bindings }>
+  | ModalContext<{ Bindings: Bindings }>
+
+function channelIdOf(interaction: unknown): string {
+  const i = interaction as { channel_id?: string; channel?: { id?: string } }
+  return i.channel_id ?? i.channel?.id ?? ''
+}
+
+function stubOf(c: Ctx, guildId: string, channelId: string) {
+  return c.env.QUIZ_SESSION.getByName(`${guildId}:${channelId}`)
+}
+
+const IGNORED_MESSAGE: Record<string, string> = {
+  'not-active': 'この回答は受け付けられません。',
+  stale: 'この問題はすでに次へ進みました。',
+  'not-host': 'これはホストのプレイです。',
+  closed: 'この問題はすでに締め切られました。',
+  already: 'すでに回答済みです。',
+}
+
+/** /quiz play: 出題設定GUIを開く。 */
+export async function handleQuizPlay(c: CommandContext<{ Bindings: Bindings }>) {
+  const actor = actorFromInteraction(c.interaction)
+  if (!actor.guildId) return c.ephemeral().res('この操作はサーバー内で実行してください。')
+  const channelId = channelIdOf(c.interaction)
+  const stub = stubOf(c, actor.guildId, channelId)
+  const view = await stub.openDraft(actor, channelId)
+  const panel = buildConfigPanel(view)
+  return c.res(panel)
+}
+
+function stubFromComponent(
+  c: ComponentContext<{ Bindings: Bindings }> | ModalContext<{ Bindings: Bindings }>,
+) {
+  const actor = actorFromInteraction(c.interaction)
+  const channelId = channelIdOf(c.interaction)
+  return { actor, channelId, stub: stubOf(c, actor.guildId ?? '', channelId) }
+}
+
+export async function handleQuizSelect(c: ComponentContext<{ Bindings: Bindings }>) {
+  const value = (c.interaction.data as { values?: string[] }).values?.[0] ?? ''
+  const { stub } = stubFromComponent(c)
+  const view = await stub.selectQuiz(value)
+  return c.resUpdate(buildConfigPanel(view))
+}
+
+export async function handlePagePrev(c: ComponentContext<{ Bindings: Bindings }>) {
+  const { stub } = stubFromComponent(c)
+  return c.resUpdate(buildConfigPanel(await stub.changePage(-1)))
+}
+
+export async function handlePageNext(c: ComponentContext<{ Bindings: Bindings }>) {
+  const { stub } = stubFromComponent(c)
+  return c.resUpdate(buildConfigPanel(await stub.changePage(1)))
+}
+
+export async function handleModeToggle(c: ComponentContext<{ Bindings: Bindings }>) {
+  const { stub } = stubFromComponent(c)
+  return c.resUpdate(buildConfigPanel(await stub.toggleMode()))
+}
+
+export function handleCountOpen(c: ComponentContext<{ Bindings: Bindings }>) {
+  return c.resModal(buildCountModal(50))
+}
+
+export async function handleCountModal(c: ModalContext<{ Bindings: Bindings }>) {
+  const raw = (c.var as Record<string, string | undefined>)[COUNT_INPUT] ?? '1'
+  const n = Number.parseInt(raw, 10)
+  const { stub } = stubFromComponent(c)
+  const view = await stub.setCount(n)
+  return c
+    .ephemeral()
+    .res(`出題数を ${view.count} 問に設定しました。（パネルは次の操作で更新されます）`)
+}
+
+export async function handlePlay(c: ComponentContext<{ Bindings: Bindings }>) {
+  const { stub } = stubFromComponent(c)
+  const messageId = c.interaction.message.id
+  const result = await stub.start(messageId)
+  if (!result.ok) {
+    const msg = result.reason === 'no-quiz' ? 'クイズを選択してください。' : '設問がありません。'
+    return c.ephemeral().res(msg)
+  }
+  const step: Extract<NextStep, { done: false }> = {
+    done: false,
+    question: result.first,
+    number: result.number,
+    total: result.total,
+  }
+  return c.resUpdate(buildSessionQuestion(step, messageId))
+}
+
+function advanceHeader(
+  outcome: Extract<AnswerOutcome, { kind: 'solo-result' | 'buzz-win' }>,
+): string {
+  const answers = outcome.correctAnswers.join(' / ')
+  const exp = outcome.explanation ? `\n解説: ${outcome.explanation}` : ''
+  if (outcome.kind === 'buzz-win') {
+    return `🎉 <@${outcome.winnerId}> が正解！ 正解: ${answers}${exp}`
+  }
+  const mark = outcome.correct ? '✅ 正解' : '❌ 不正解'
+  return `前問: ${mark}（正解: ${answers}）${exp}`
+}
+
+/** 前問結果 + 次の設問（or サマリ）のメッセージを組み立てる。componentsがnullなら空にする。 */
+function renderAdvance(
+  outcome: Extract<AnswerOutcome, { kind: 'solo-result' | 'buzz-win' }>,
+  messageId: string,
+): { content: string; components: Components | null } {
+  const header = advanceHeader(outcome)
+  if (outcome.next.done) {
+    return { content: `${header}\n\n${buildSummary(outcome.next.summary)}`, components: null }
+  }
+  return buildSessionQuestion(outcome.next, messageId, header)
+}
+
+/** 4択・○×のセッション回答（ボタン）。 */
+export async function handleSessionAnswer(c: ComponentContext<{ Bindings: Bindings }>) {
+  const [questionId, idxStr] = (c.var.custom_id ?? '').split(':')
+  const { actor, stub } = stubFromComponent(c)
+  const input: AnswerInput = { kind: 'choice', idx: Number(idxStr) }
+  const outcome = await stub.answer(actor.userId, questionId ?? '', input)
+
+  if (outcome.kind === 'ignored')
+    return c.ephemeral().res(IGNORED_MESSAGE[outcome.reason] ?? 'エラー')
+  if (outcome.kind === 'buzz-wrong') return c.ephemeral().res('不正解… 早い者勝ちです。')
+
+  const messageId = c.interaction.message.id
+  const rendered = renderAdvance(outcome, messageId)
+  return c.resUpdate({ content: rendered.content, components: rendered.components ?? [] })
+}
+
+/** 自由記述: モーダルを開く。 */
+export function handleSessionFtOpen(c: ComponentContext<{ Bindings: Bindings }>) {
+  const [questionId, messageId] = (c.var.custom_id ?? '').split(':')
+  return c.resModal(buildFreetextModal(questionId ?? '', messageId ?? ''))
+}
+
+/** 自由記述: モーダル送信。モーダルは元メッセージを更新できないためRESTで編集する。 */
+export async function handleSessionFtModal(c: ModalContext<{ Bindings: Bindings }>) {
+  const [questionId, messageId] = (c.var.custom_id ?? '').split(':')
+  const text = (c.var as Record<string, string | undefined>)[FT_INPUT] ?? ''
+  const { actor, channelId, stub } = stubFromComponent(c)
+  const outcome = await stub.answer(actor.userId, questionId ?? '', { kind: 'text', text })
+
+  if (outcome.kind === 'ignored')
+    return c.ephemeral().res(IGNORED_MESSAGE[outcome.reason] ?? 'エラー')
+  if (outcome.kind === 'buzz-wrong') return c.ephemeral().res('不正解… 早い者勝ちです。')
+
+  const rendered = renderAdvance(outcome, messageId ?? '')
+  if (messageId) {
+    await editChannelMessage(c.env.DISCORD_TOKEN, channelId, messageId, {
+      content: rendered.content,
+      components: rendered.components ? rendered.components.toJSON() : [],
+    })
+  }
+  return c.ephemeral().res(outcome.kind === 'buzz-win' ? '正解！🎉' : '回答を記録しました。')
+}

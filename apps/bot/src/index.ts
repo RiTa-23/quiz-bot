@@ -3,13 +3,31 @@ import { DiscordHono } from 'discord-hono'
 import { handleQuizCommand } from './commands/quiz'
 import type { Bindings } from './env'
 import {
-  ANSWER_BUTTON,
-  FREETEXT_MODAL,
-  FREETEXT_OPEN,
-  handleAnswerButton,
-  handleFreetextModal,
-  handleFreetextOpen,
-} from './interactions/answer'
+  handleCountModal,
+  handleCountOpen,
+  handleModeToggle,
+  handlePageNext,
+  handlePagePrev,
+  handlePlay,
+  handleQuizSelect,
+  handleSessionAnswer,
+  handleSessionFtModal,
+  handleSessionFtOpen,
+} from './session/handlers'
+import {
+  CFG_COUNT_MODAL,
+  CFG_COUNT_OPEN,
+  CFG_MODE_TOGGLE,
+  CFG_PAGE_NEXT,
+  CFG_PAGE_PREV,
+  CFG_PLAY,
+  CFG_QUIZ_SELECT,
+  SESSION_ANSWER,
+  SESSION_FT_MODAL,
+  SESSION_FT_OPEN,
+} from './session/messages'
+
+export { QuizSession } from './session/QuizSession'
 
 const ERROR_MESSAGES: Record<AppError['code'], string> = {
   UNAUTHORIZED: 'ログインが必要です。',
@@ -25,7 +43,7 @@ type AnyContext = {
   res: (m: string) => Response
 }
 
-async function withErrorHandling(
+async function guard(
   c: AnyContext,
   handler: () => Promise<Response> | Response,
   ephemeral: boolean,
@@ -43,10 +61,20 @@ async function withErrorHandling(
 
 const app = new DiscordHono<{ Bindings: Bindings }>()
 
-app.command('quiz', (c) => withErrorHandling(c, () => handleQuizCommand(c), false))
+app.command('quiz', (c) => guard(c, () => handleQuizCommand(c), false))
 
-app.component(ANSWER_BUTTON, (c) => withErrorHandling(c, () => handleAnswerButton(c), true))
-app.component(FREETEXT_OPEN, (c) => withErrorHandling(c, () => handleFreetextOpen(c), true))
-app.modal(FREETEXT_MODAL, (c) => withErrorHandling(c, () => handleFreetextModal(c), true))
+// 出題設定GUI
+app.component(CFG_QUIZ_SELECT, (c) => guard(c, () => handleQuizSelect(c), true))
+app.component(CFG_PAGE_PREV, (c) => guard(c, () => handlePagePrev(c), true))
+app.component(CFG_PAGE_NEXT, (c) => guard(c, () => handlePageNext(c), true))
+app.component(CFG_MODE_TOGGLE, (c) => guard(c, () => handleModeToggle(c), true))
+app.component(CFG_COUNT_OPEN, (c) => guard(c, () => handleCountOpen(c), true))
+app.modal(CFG_COUNT_MODAL, (c) => guard(c, () => handleCountModal(c), true))
+app.component(CFG_PLAY, (c) => guard(c, () => handlePlay(c), true))
+
+// セッション回答
+app.component(SESSION_ANSWER, (c) => guard(c, () => handleSessionAnswer(c), true))
+app.component(SESSION_FT_OPEN, (c) => guard(c, () => handleSessionFtOpen(c), true))
+app.modal(SESSION_FT_MODAL, (c) => guard(c, () => handleSessionFtModal(c), true))
 
 export default app
