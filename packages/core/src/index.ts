@@ -13,7 +13,7 @@ export { addShare, removeShare, listShares, type QuizShare } from './quiz/shares
 export { addEditor, removeEditor, listEditors, type QuizEditor } from './quiz/editors'
 export { resolveQuizRole } from './quiz/permissions'
 
-export { getRandomQuestion } from './play/getRandomQuestion'
+export { getRandomQuestion, getPlayQuestion } from './play/getRandomQuestion'
 export { submitAttempt, type SubmitAttemptResult } from './play/submitAttempt'
 export { normalizeAnswer, isCorrectAnswer } from './play/normalizeAnswer'
 

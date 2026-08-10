@@ -6,11 +6,8 @@ export const quizCommand = new Command('quiz', 'クイズの作成・出題・�
     new Option('title', 'クイズのタイトル').required(),
     new Option('description', 'クイズの説明'),
   ),
-  new SubCommand('play', 'クイズを出題する').options(new Option('quiz_id', 'クイズID').required()),
-  new SubCommand('answer', '出題された設問に回答する').options(
+  new SubCommand('play', 'クイズを出題する（ボタン/入力で回答）').options(
     new Option('quiz_id', 'クイズID').required(),
-    new Option('question_id', '設問ID').required(),
-    new Option('answer', '回答内容').required(),
   ),
   new SubCommand('delete', 'クイズを削除する').options(
     new Option('quiz_id', 'クイズID').required(),

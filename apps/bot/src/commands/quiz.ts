@@ -6,16 +6,16 @@ import {
   createQuiz,
   deleteQuiz,
   getRandomQuestion,
-  submitAttempt,
 } from '@quiz-bot/core'
 import type { CommandContext } from 'discord-hono'
-import { actorFromContext } from '../actor'
+import { actorFromInteraction } from '../actor'
 import type { Bindings } from '../env'
+import { buildQuestionMessage } from '../interactions/answer'
 
 export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }>) {
   const v = c.var as Record<string, string | undefined>
   const db = createDb(c.env.DB)
-  const actor = actorFromContext(c)
+  const actor = actorFromInteraction(c.interaction)
 
   switch (c.sub.command) {
     case 'create': {
@@ -28,21 +28,7 @@ export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }
 
     case 'play': {
       const question = await getRandomQuestion(db, actor, v.quiz_id ?? '')
-      const choicesText = question.choices ? `\n${question.choices.join(' / ')}` : ''
-      return c.res(`**問題**\n${question.body}${choicesText}\n(question_id: \`${question.id}\`)`)
-    }
-
-    case 'answer': {
-      const result = await submitAttempt(
-        db,
-        actor,
-        v.quiz_id ?? '',
-        v.question_id ?? '',
-        v.answer ?? '',
-      )
-      const verdict = result.isCorrect ? '正解です！🎉' : '不正解です。'
-      const explanation = result.explanation ? `\n解説: ${result.explanation}` : ''
-      return c.res(`${verdict}\n正解: ${result.correctAnswers.join(' / ')}${explanation}`)
+      return c.res(buildQuestionMessage(question))
     }
 
     case 'delete': {
