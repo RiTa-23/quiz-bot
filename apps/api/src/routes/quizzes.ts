@@ -1,7 +1,7 @@
 import {
   addEditor,
+  addPublicQuiz,
   addQuestion,
-  addShare,
   createDb,
   createQuiz,
   deleteQuestion,
@@ -10,8 +10,8 @@ import {
   getQuizStats,
   getRandomQuestion,
   listQuizzes,
+  removeAddedQuiz,
   removeEditor,
-  removeShare,
   submitAttempt,
   updateQuestion,
   updateQuiz,
@@ -51,7 +51,7 @@ const createQuizSchema = z.object({
   title: z.string().min(1),
   description: z.string().nullable().optional(),
   owner_guild_id: z.string(),
-  visibility: z.enum(['private', 'shared']).optional(),
+  visibility: z.enum(['private', 'public']).optional(),
 })
 
 quizzesRoutes.post('/', async (c) => {
@@ -83,7 +83,7 @@ quizzesRoutes.get('/:id', async (c) => {
 const updateQuizSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  visibility: z.enum(['private', 'shared']).optional(),
+  visibility: z.enum(['private', 'public']).optional(),
 })
 
 quizzesRoutes.patch('/:id', async (c) => {
@@ -166,21 +166,26 @@ quizzesRoutes.delete('/:id/questions/:qid', async (c) => {
 
 const shareSchema = z.object({ target_guild_id: z.string() })
 
+// 公開クイズを指定サーバーに追加する（作成者による押し付けではなく、
+// 追加する側の操作として扱う。Botの `/quiz add-public` と同じ経路）
 quizzesRoutes.post('/:id/shares', async (c) => {
   try {
     const body = shareSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const share = await addShare(db, actorOf(c), c.req.param('id'), body.target_guild_id)
-    return c.json(share, 201)
+    const actor = { userId: c.get('userId'), guildId: body.target_guild_id }
+    const result = await addPublicQuiz(db, actor, c.req.param('id'))
+    return c.json(result, 201)
   } catch (error) {
     return handleApiError(c, error)
   }
 })
 
-quizzesRoutes.delete('/:id/shares/:shareId', async (c) => {
+quizzesRoutes.delete('/:id/shares', async (c) => {
   try {
+    const body = shareSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    await removeShare(db, actorOf(c), c.req.param('id'), c.req.param('shareId'))
+    const actor = { userId: c.get('userId'), guildId: body.target_guild_id }
+    await removeAddedQuiz(db, actor, c.req.param('id'))
     return c.body(null, 204)
   } catch (error) {
     return handleApiError(c, error)

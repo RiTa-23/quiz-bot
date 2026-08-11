@@ -6,7 +6,7 @@ import type { Actor, Quiz } from '../types'
 export type CreateQuizInput = {
   title: string
   description?: string | null
-  visibility?: 'private' | 'shared'
+  visibility?: 'private' | 'public'
 }
 
 export async function createQuiz(

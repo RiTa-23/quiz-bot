@@ -53,6 +53,20 @@ export async function listDeletableQuizzes(db: Database, actor: Actor): Promise<
     .map(toPlayableQuiz)
 }
 
+export type OwnedQuiz = PlayableQuiz & { visibility: 'private' | 'public' }
+
+/**
+ * actor が作成したクイズを公開設定つきで返す。公開設定GUI用。
+ * 公開設定を変更できるのは作成者のみ（updateQuiz が assertIsOwner で担保する）。
+ */
+export async function listOwnedQuizzes(db: Database, actor: Actor): Promise<OwnedQuiz[]> {
+  const quizzes = await listQuizzes(db, actor)
+  return quizzes
+    .filter((q) => q.role === 'owner')
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((q) => ({ ...toPlayableQuiz(q), visibility: q.visibility }))
+}
+
 /** クイズの設問数を返す（出題数プルダウンの上限算出用）。 */
 export async function countQuizQuestions(db: Database, quizId: string): Promise<number> {
   const rows = await db

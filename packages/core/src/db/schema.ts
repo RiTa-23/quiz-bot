@@ -11,7 +11,7 @@ export const quizzes = sqliteTable(
     description: text('description'),
     ownerUserId: text('owner_user_id').notNull(),
     ownerGuildId: text('owner_guild_id').notNull(),
-    visibility: text('visibility', { enum: ['private', 'shared'] })
+    visibility: text('visibility', { enum: ['private', 'public'] })
       .notNull()
       .default('private'),
     createdAt: text('created_at').notNull().default(nowIso()),

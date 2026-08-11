@@ -61,6 +61,26 @@ import {
   SESSION_FT_OPEN,
 } from './session/messages'
 
+import {
+  handlePubClear,
+  handlePubSearchModal,
+  handlePubSearchOpen,
+  handlePubSelect,
+  handleRmSelect,
+  handleVisPrivate,
+  handleVisPublic,
+  handleVisSelect,
+} from './sharing/handlers'
+import {
+  PUB_CLEAR,
+  PUB_SEARCH_MODAL,
+  PUB_SEARCH_OPEN,
+  PUB_SELECT,
+  RM_SELECT,
+  VIS_PRIVATE,
+  VIS_PUBLIC,
+  VIS_SELECT,
+} from './sharing/messages'
 import { handleQsPageNext, handleQsPagePrev, handleQsSelect } from './stats/statsHandlers'
 import { QS_PAGE_NEXT, QS_PAGE_PREV, QS_SELECT } from './stats/statsMessages'
 
@@ -130,6 +150,16 @@ app.component(DQ_PAGE_NEXT, (c) => guard(c, () => handleDqPageNext(c), true))
 app.component(DQ_CONFIRM, (c) => guard(c, () => handleDqConfirm(c), true))
 app.component(DQ_EXECUTE, (c) => guard(c, () => handleDqExecute(c), true))
 app.component(DQ_CANCEL, (c) => guard(c, () => handleDqCancel(c), true))
+
+// 公開クイズの共有GUI
+app.component(VIS_SELECT, (c) => guard(c, () => handleVisSelect(c), true))
+app.component(VIS_PUBLIC, (c) => guard(c, () => handleVisPublic(c), true))
+app.component(VIS_PRIVATE, (c) => guard(c, () => handleVisPrivate(c), true))
+app.component(PUB_SELECT, (c) => guard(c, () => handlePubSelect(c), true))
+app.component(PUB_SEARCH_OPEN, (c) => guard(c, () => handlePubSearchOpen(c), true))
+app.modal(PUB_SEARCH_MODAL, (c) => guard(c, () => handlePubSearchModal(c), true))
+app.component(PUB_CLEAR, (c) => guard(c, () => handlePubClear(c), true))
+app.component(RM_SELECT, (c) => guard(c, () => handleRmSelect(c), true))
 
 // 統計GUI
 app.component(QS_SELECT, (c) => guard(c, () => handleQsSelect(c), true))

@@ -7,7 +7,7 @@ import { assertIsOwner, getQuizOrThrow, resolveQuizRole } from './permissions'
 export type UpdateQuizInput = {
   title?: string
   description?: string | null
-  visibility?: 'private' | 'shared'
+  visibility?: 'private' | 'public'
 }
 
 export async function updateQuiz(

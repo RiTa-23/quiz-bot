@@ -13,7 +13,7 @@ export type Quiz = {
   description: string | null
   ownerUserId: string
   ownerGuildId: string
-  visibility: 'private' | 'shared'
+  visibility: 'private' | 'public'
   createdAt: string
   updatedAt: string
 }

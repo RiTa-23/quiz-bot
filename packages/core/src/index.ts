@@ -9,7 +9,15 @@ export { updateQuiz, type UpdateQuizInput } from './quiz/updateQuiz'
 export { deleteQuiz } from './quiz/deleteQuiz'
 export { addQuestion, updateQuestion, deleteQuestion } from './quiz/questions'
 export type { AddQuestionInput, UpdateQuestionInput } from './quiz/questions'
-export { addShare, removeShare, listShares, type QuizShare } from './quiz/shares'
+export {
+  listPublicQuizzes,
+  listAddedQuizzes,
+  addPublicQuiz,
+  removeAddedQuiz,
+  listShares,
+  type QuizShare,
+  type PublicQuizListing,
+} from './quiz/shares'
 export { addEditor, removeEditor, listEditors, type QuizEditor } from './quiz/editors'
 export { resolveQuizRole } from './quiz/permissions'
 
@@ -20,9 +28,11 @@ export {
   listPlayableQuizzes,
   listEditableQuizzes,
   listDeletableQuizzes,
+  listOwnedQuizzes,
   getSessionQuestions,
   countQuizQuestions,
   type PlayableQuiz,
+  type OwnedQuiz,
 } from './play/session'
 
 export { getQuizStats, type QuizStats, type QuizQuestionStats } from './stats/quizStats'

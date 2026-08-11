@@ -8,10 +8,9 @@ export const quizCommand = new Command('quiz', 'クイズの作成・出題・�
   ),
   new SubCommand('play', 'クイズの出題設定パネルを開く'),
   new SubCommand('delete', 'クイズを削除する（パネルで選択）'),
-  new SubCommand('share', '他サーバーにクイズを共有する').options(
-    new Option('quiz_id', 'クイズID').required(),
-    new Option('target_guild_id', '共有先サーバーID').required(),
-  ),
+  new SubCommand('visibility', 'クイズの公開設定を変える（作成者のみ）'),
+  new SubCommand('add-public', '公開クイズを探してこのサーバーに追加する'),
+  new SubCommand('remove-public', '追加した公開クイズをこのサーバーから外す'),
   new SubCommand('add-editor', 'クイズの共同編集者を追加する').options(
     new Option('quiz_id', 'クイズID').required(),
     new Option('target_type', 'guild または user').required(),
