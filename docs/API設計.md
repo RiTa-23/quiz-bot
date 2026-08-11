@@ -22,7 +22,10 @@
 自分が閲覧・編集可能なクイズ一覧（作成分 + 自サーバーが追加した公開クイズ + Editor 権限分）を取得。
 
 - Query: `guild_id`（指定時はそのサーバーに紐づくものに絞る）
-- Response: `Quiz[]`（各要素に自分の権限ロール `owner | editor | shared | none` を含める）
+- Response: `Quiz[]`。各要素に以下を含める
+  - `role`: **そのサーバーでの**権限（`owner | editor | shared | none`）。出題・統計閲覧の可否に対応する
+  - `isOwner`: 作成者本人か（**サーバーに依存しない**）。設問編集・削除・公開設定変更の可否に対応する
+- 自分が作成したクイズは所属サーバーに関わらず一覧に含まれるが、そのサーバーで使えない場合 `role` は `none`（`isOwner` は `true`）になる（[要件定義.md](./要件定義.md) 2.6.1）
 
 ### `POST /api/quizzes`
 クイズ作成。
@@ -35,6 +38,7 @@
 
 - Response: `Quiz & { questions: Question[] }`
 - 注意: `questions[].answers`（正解）は Owner / Editor 以外には含めない（不正回答対策）
+- 閲覧できるのは「そのサーバーで使えるクイズ」または「自分が作成したクイズ」。`guild_id` を付けない呼び出しでも、**作成者なら自分のクイズを取得できる**（管理画面向け）
 
 ### `PATCH /api/quizzes/:id`
 クイズ情報更新（タイトル・説明・公開設定）。Owner のみ。
@@ -119,7 +123,7 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 ## 統計
 
 ### `GET /api/quizzes/:id/stats`
-クイズ単位の統計（`quiz_attempts` 由来＝1人モード）。**閲覧権限が必要**で、権限がなければ `403 FORBIDDEN` を返す。
+クイズ単位の統計（`quiz_attempts` 由来＝1人モード）。**閲覧権限が必要**で、権限がなければ `403 FORBIDDEN` を返す（「そのサーバーで使えるクイズ」または「自分が作成したクイズ」なら閲覧可）。
 
 - 設問一覧には**まだ誰も答えていない設問も含まれる**（`totalAttempts: 0`）
 - Response:

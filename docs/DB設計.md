@@ -73,7 +73,8 @@ Question 1---N BuzzAttempt    （早押しモードの回答記録）
 - 行の作成は `/quiz add-public`（`addPublicQuiz`）、削除は `/quiz remove-public`（`removeAddedQuiz`）
 - 追加できるのは `quizzes.visibility = 'public'` のクイズのみ。ただし**追加後に作成者が `private` に戻してもこの行は残る**ため、既に追加したサーバーでは引き続き利用できる
 - 作成者がクイズを削除すると `ON DELETE CASCADE` でこの行も消える（追加していたサーバーでは使えなくなる）
-- `resolveQuizRole` はこの行の有無を見て `shared` ロールを与える
+- **「そのサーバーでクイズが使えるか」の根拠は3つだけ**: `quizzes.owner_guild_id`（作成元）/ このテーブルの行（追加済み）/ `quiz_editors` の `target_type='guild'` 行（ギルドEditor指定）。`resolveQuizRole` はこの3つを見て利用可否を決め、当てはまらなければ**作成者であっても** `none` を返す（要件定義.md 2.6.1）
+- 一方、クイズの管理権限（作成者か）は `quizzes.owner_user_id` だけで決まり、サーバーに依存しない
 
 ### quiz_editors（共同編集者）
 
