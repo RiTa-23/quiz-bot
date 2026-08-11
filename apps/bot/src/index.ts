@@ -62,6 +62,13 @@ import {
 } from './session/messages'
 
 import {
+  handleEdGuildOff,
+  handleEdGuildOn,
+  handleEdQuizSelect,
+  handleEdUserSelect,
+} from './sharing/editorHandlers'
+import { ED_GUILD_OFF, ED_GUILD_ON, ED_QUIZ_SELECT, ED_USER_SELECT } from './sharing/editorMessages'
+import {
   handlePubClear,
   handlePubSearchModal,
   handlePubSearchOpen,
@@ -160,6 +167,12 @@ app.component(PUB_SEARCH_OPEN, (c) => guard(c, () => handlePubSearchOpen(c), tru
 app.modal(PUB_SEARCH_MODAL, (c) => guard(c, () => handlePubSearchModal(c), true))
 app.component(PUB_CLEAR, (c) => guard(c, () => handlePubClear(c), true))
 app.component(RM_SELECT, (c) => guard(c, () => handleRmSelect(c), true))
+
+// 編集権限の設定GUI
+app.component(ED_QUIZ_SELECT, (c) => guard(c, () => handleEdQuizSelect(c), true))
+app.component(ED_GUILD_ON, (c) => guard(c, () => handleEdGuildOn(c), true))
+app.component(ED_GUILD_OFF, (c) => guard(c, () => handleEdGuildOff(c), true))
+app.component(ED_USER_SELECT, (c) => guard(c, () => handleEdUserSelect(c), true))
 
 // 統計GUI
 app.component(QS_SELECT, (c) => guard(c, () => handleQsSelect(c), true))

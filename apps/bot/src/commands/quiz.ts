@@ -1,10 +1,11 @@
-import { addEditor, createDb, createQuiz } from '@quiz-bot/core'
+import { createDb, createQuiz } from '@quiz-bot/core'
 import type { CommandContext } from 'discord-hono'
 import { actorFromInteraction } from '../actor'
 import { handleDeleteCommand } from '../authoring/deleteHandlers'
 import { handleAddQuestionCommand } from '../authoring/handlers'
 import type { Bindings } from '../env'
 import { handleQuizPlay } from '../session/handlers'
+import { handleEditorsCommand } from '../sharing/editorHandlers'
 import {
   handleAddPublicCommand,
   handleRemovePublicCommand,
@@ -48,11 +49,8 @@ export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }
     case 'remove-public':
       return handleRemovePublicCommand(c)
 
-    case 'add-editor': {
-      const targetType = v.target_type === 'guild' ? 'guild' : 'user'
-      await addEditor(db, actor, v.quiz_id ?? '', { targetType, targetId: v.target_id ?? '' })
-      return c.res('共同編集者を追加しました。')
-    }
+    case 'editors':
+      return handleEditorsCommand(c)
 
     case 'add-question':
       return handleAddQuestionCommand(c)

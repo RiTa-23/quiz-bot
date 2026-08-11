@@ -18,7 +18,16 @@ export {
   type QuizShare,
   type PublicQuizListing,
 } from './quiz/shares'
-export { addEditor, removeEditor, listEditors, type QuizEditor } from './quiz/editors'
+export {
+  addEditor,
+  removeEditor,
+  listEditors,
+  getEditorSettings,
+  setGuildEditor,
+  setUserEditors,
+  type QuizEditor,
+  type EditorSettings,
+} from './quiz/editors'
 export { resolveQuizRole } from './quiz/permissions'
 
 export { getRandomQuestion, getPlayQuestion } from './play/getRandomQuestion'
