@@ -89,6 +89,8 @@
 
 ## 共同編集者
 
+編集権限の対象は「サーバー単位（そのサーバーの全員）」と「ユーザー単位」の2種類（[要件定義.md](./要件定義.md) 2.5）。Discord側は `/quiz editors` のパネルで設定する。
+
 ### `POST /api/quizzes/:id/editors`
 編集者追加。Owner のみ。
 
@@ -96,6 +98,8 @@
 
 ### `DELETE /api/quizzes/:id/editors/:editorId`
 編集者削除。Owner のみ。
+
+> Bot側は行ID指定ではなく「設定を指定の状態に揃える」形の内部API（`setGuildEditor` / `setUserEditors`）を使う。Webからも同様の一括設定が必要になったら、対応するエンドポイントを追加する。
 
 ---
 
