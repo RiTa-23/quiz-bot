@@ -3,7 +3,7 @@ import type { Database } from '../db/client'
 import { quizEditors } from '../db/schema'
 import { conflict, notFound } from '../errors'
 import type { Actor } from '../types'
-import { assertIsOwner, getQuizOrThrow, resolveQuizRole } from './permissions'
+import { assertIsOwnerUser, getQuizOrThrow } from './permissions'
 
 export type QuizEditor = {
   id: string
@@ -22,8 +22,7 @@ export async function addEditor(
   input: { targetType: 'guild' | 'user'; targetId: string },
 ): Promise<QuizEditor> {
   const quiz = await getQuizOrThrow(db, quizId)
-  const role = await resolveQuizRole(db, actor, quiz)
-  assertIsOwner(role)
+  assertIsOwnerUser(actor, quiz)
 
   const [existing] = await db
     .select({ id: quizEditors.id })
@@ -68,8 +67,7 @@ export async function removeEditor(
   editorId: string,
 ): Promise<void> {
   const quiz = await getQuizOrThrow(db, quizId)
-  const role = await resolveQuizRole(db, actor, quiz)
-  assertIsOwner(role)
+  assertIsOwnerUser(actor, quiz)
 
   const [existing] = await db
     .select({ id: quizEditors.id })

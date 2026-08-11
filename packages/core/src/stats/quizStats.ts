@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { questions, quizAttempts } from '../db/schema'
-import { assertCanView, getQuizOrThrow, resolveQuizRole } from '../quiz/permissions'
+import { assertCanViewQuiz, getQuizOrThrow, resolveQuizRole } from '../quiz/permissions'
 import type { Actor } from '../types'
 
 export type QuizQuestionStats = {
@@ -37,7 +37,7 @@ export async function getQuizStats(
   options?: { guildId?: string },
 ): Promise<QuizStats> {
   const quiz = await getQuizOrThrow(db, quizId)
-  assertCanView(await resolveQuizRole(db, actor, quiz))
+  assertCanViewQuiz(await resolveQuizRole(db, actor, quiz), actor, quiz)
 
   const scopeGuildId = options?.guildId
   // 絞り込みは JOIN 条件に置く。WHERE に置くと LEFT JOIN が INNER JOIN に退化し、

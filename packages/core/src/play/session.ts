@@ -17,7 +17,8 @@ function toPlayableQuiz(q: {
 }
 
 /**
- * そのサーバーで出題可能なクイズ（自サーバー作成 + 共有 + Editor権限）を作成日時昇順で返す。
+ * そのサーバーで出題可能なクイズ（作成元サーバー + 追加した公開クイズ + ギルドEditor）を返す。
+ * 自分が作成したクイズでも、別のサーバーにいる場合は含まれない（要件定義.md 2.6）。
  * 出題設定GUIのクイズ選択プルダウン用。
  */
 export async function listPlayableQuizzes(db: Database, actor: Actor): Promise<PlayableQuiz[]> {
@@ -29,13 +30,13 @@ export async function listPlayableQuizzes(db: Database, actor: Actor): Promise<P
 }
 
 /**
- * actor が設問を編集できるクイズ（Owner または Editor）を作成日時昇順で返す。
- * 設問作成GUIのクイズ選択プルダウン用（共有先サーバーは編集不可なので除外）。
+ * actor が設問を編集できるクイズ（作成者 または Editor）を返す。
+ * 管理操作はサーバーをまたいで行えるため、別サーバーにいても自分のクイズは含まれる。
  */
 export async function listEditableQuizzes(db: Database, actor: Actor): Promise<PlayableQuiz[]> {
   const quizzes = await listQuizzes(db, actor)
   return quizzes
-    .filter((q) => q.role === 'owner' || q.role === 'editor')
+    .filter((q) => q.isOwner || q.role === 'editor')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map(toPlayableQuiz)
 }
@@ -48,7 +49,7 @@ export async function listEditableQuizzes(db: Database, actor: Actor): Promise<P
 export async function listDeletableQuizzes(db: Database, actor: Actor): Promise<PlayableQuiz[]> {
   const quizzes = await listQuizzes(db, actor)
   return quizzes
-    .filter((q) => q.role === 'owner')
+    .filter((q) => q.isOwner)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map(toPlayableQuiz)
 }
@@ -57,12 +58,12 @@ export type OwnedQuiz = PlayableQuiz & { visibility: 'private' | 'public' }
 
 /**
  * actor が作成したクイズを公開設定つきで返す。公開設定GUI用。
- * 公開設定を変更できるのは作成者のみ（updateQuiz が assertIsOwner で担保する）。
+ * 公開設定を変更できるのは作成者のみ（updateQuiz が assertIsOwnerUser で担保する）。
  */
 export async function listOwnedQuizzes(db: Database, actor: Actor): Promise<OwnedQuiz[]> {
   const quizzes = await listQuizzes(db, actor)
   return quizzes
-    .filter((q) => q.role === 'owner')
+    .filter((q) => q.isOwner)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((q) => ({ ...toPlayableQuiz(q), visibility: q.visibility }))
 }

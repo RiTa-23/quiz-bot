@@ -3,7 +3,7 @@ import type { Database } from '../db/client'
 import { questions } from '../db/schema'
 import { notFound, validationError } from '../errors'
 import type { Actor, Question, QuestionType } from '../types'
-import { assertCanEdit, getQuizOrThrow, resolveQuizRole } from './permissions'
+import { assertCanEditQuiz, getQuizOrThrow } from './permissions'
 
 export type AddQuestionInput = {
   type: QuestionType
@@ -32,8 +32,7 @@ export async function addQuestion(
   input: AddQuestionInput,
 ): Promise<Question> {
   const quiz = await getQuizOrThrow(db, quizId)
-  const role = await resolveQuizRole(db, actor, quiz)
-  assertCanEdit(role)
+  await assertCanEditQuiz(db, actor, quiz)
   validateQuestionInput(input, input.type)
 
   const id = crypto.randomUUID()
@@ -84,8 +83,7 @@ export async function updateQuestion(
   input: UpdateQuestionInput,
 ): Promise<Question> {
   const quiz = await getQuizOrThrow(db, quizId)
-  const role = await resolveQuizRole(db, actor, quiz)
-  assertCanEdit(role)
+  await assertCanEditQuiz(db, actor, quiz)
 
   const [existing] = await db
     .select()
@@ -130,8 +128,7 @@ export async function deleteQuestion(
   questionId: string,
 ): Promise<void> {
   const quiz = await getQuizOrThrow(db, quizId)
-  const role = await resolveQuizRole(db, actor, quiz)
-  assertCanEdit(role)
+  await assertCanEditQuiz(db, actor, quiz)
 
   await db.delete(questions).where(and(eq(questions.id, questionId), eq(questions.quizId, quizId)))
 }

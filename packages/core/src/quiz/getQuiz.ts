@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { questions } from '../db/schema'
 import type { Actor, PublicQuestion, Question, Quiz } from '../types'
-import { assertCanView, getQuizOrThrow, resolveQuizRole } from './permissions'
+import { assertCanViewQuiz, getQuizOrThrow, resolveQuizRole } from './permissions'
 
 function toQuestion(row: typeof questions.$inferSelect): Question {
   return {
@@ -34,7 +34,7 @@ export type QuizDetail = Quiz & { questions: Question[] | PublicQuestion[] }
 export async function getQuiz(db: Database, actor: Actor, quizId: string): Promise<QuizDetail> {
   const quiz = await getQuizOrThrow(db, quizId)
   const role = await resolveQuizRole(db, actor, quiz)
-  assertCanView(role)
+  assertCanViewQuiz(role, actor, quiz)
 
   const rows = await db
     .select()

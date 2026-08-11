@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { quizzes } from '../db/schema'
 import type { Actor, Quiz } from '../types'
-import { assertIsOwner, getQuizOrThrow, resolveQuizRole } from './permissions'
+import { assertIsOwnerUser, getQuizOrThrow } from './permissions'
 
 export type UpdateQuizInput = {
   title?: string
@@ -17,8 +17,7 @@ export async function updateQuiz(
   input: UpdateQuizInput,
 ): Promise<Quiz> {
   const quiz = await getQuizOrThrow(db, quizId)
-  const role = await resolveQuizRole(db, actor, quiz)
-  assertIsOwner(role)
+  assertIsOwnerUser(actor, quiz)
 
   const updatedAt = new Date().toISOString()
   await db

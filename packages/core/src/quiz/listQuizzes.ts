@@ -1,13 +1,18 @@
-import { eq, inArray, or } from 'drizzle-orm'
+import { and, eq, inArray, or } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { quizEditors, quizShares, quizzes } from '../db/schema'
 import type { Actor, Quiz, QuizRole } from '../types'
 
-export type QuizListItem = Quiz & { role: QuizRole }
+/**
+ * `role` は「そのサーバーでの」権限（出題・閲覧の可否）。
+ * `isOwner` はサーバーに依存しない作成者判定で、管理系コマンドの一覧に使う。
+ */
+export type QuizListItem = Quiz & { role: QuizRole; isOwner: boolean }
 
 /**
- * actor が閲覧・編集可能なクイズ一覧（作成分 + 自サーバーへの共有分 + Editor権限分）。
- * guildId が指定されていればそのサーバーに紐づくものに絞る。
+ * actor に関係するクイズ一覧（作成分 + 自サーバー発 + 追加済みの公開クイズ + Editor権限分）。
+ * 自分が作成したクイズは所属サーバーに関係なく含まれるが、その場合 `role` は 'none' になりうる
+ * （他サーバーでは出題できないため。要件定義.md 2.6）。
  */
 export async function listQuizzes(
   db: Database,
@@ -16,16 +21,21 @@ export async function listQuizzes(
 ): Promise<QuizListItem[]> {
   const guildId = filter?.guildId ?? actor.guildId
 
-  const editorQuizIds = (
+  const userEditorQuizIds = (
     await db
       .select({ quizId: quizEditors.quizId })
       .from(quizEditors)
-      .where(
-        guildId
-          ? or(eq(quizEditors.targetId, actor.userId), eq(quizEditors.targetId, guildId))
-          : eq(quizEditors.targetId, actor.userId),
-      )
+      .where(and(eq(quizEditors.targetType, 'user'), eq(quizEditors.targetId, actor.userId)))
   ).map((r) => r.quizId)
+
+  const guildEditorQuizIds = guildId
+    ? (
+        await db
+          .select({ quizId: quizEditors.quizId })
+          .from(quizEditors)
+          .where(and(eq(quizEditors.targetType, 'guild'), eq(quizEditors.targetId, guildId)))
+      ).map((r) => r.quizId)
+    : []
 
   const sharedQuizIds = guildId
     ? (
@@ -38,7 +48,7 @@ export async function listQuizzes(
 
   const conditions = [eq(quizzes.ownerUserId, actor.userId)]
   if (guildId) conditions.push(eq(quizzes.ownerGuildId, guildId))
-  const relatedIds = [...new Set([...editorQuizIds, ...sharedQuizIds])]
+  const relatedIds = [...new Set([...userEditorQuizIds, ...guildEditorQuizIds, ...sharedQuizIds])]
 
   const rows = await db
     .select()
@@ -50,11 +60,22 @@ export async function listQuizzes(
     )
 
   return rows.map((row) => {
+    const isOwner = row.ownerUserId === actor.userId
+    // そのサーバーで使えるか（作成元 / 追加済み / そのサーバーがEditor指定）
+    const availableInGuild = Boolean(
+      guildId &&
+        (row.ownerGuildId === guildId ||
+          sharedQuizIds.includes(row.id) ||
+          guildEditorQuizIds.includes(row.id)),
+    )
+
     let role: QuizRole = 'none'
-    if (row.ownerUserId === actor.userId) role = 'owner'
-    else if (editorQuizIds.includes(row.id)) role = 'editor'
-    else if (sharedQuizIds.includes(row.id) || (guildId && row.ownerGuildId === guildId))
-      role = 'shared'
+    if (availableInGuild) {
+      if (isOwner) role = 'owner'
+      else if (userEditorQuizIds.includes(row.id) || guildEditorQuizIds.includes(row.id))
+        role = 'editor'
+      else role = 'shared'
+    }
 
     return {
       id: row.id,
@@ -66,6 +87,7 @@ export async function listQuizzes(
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       role,
+      isOwner,
     }
   })
 }
