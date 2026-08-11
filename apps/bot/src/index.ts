@@ -1,6 +1,22 @@
 import { AppError } from '@quiz-bot/core'
 import { DiscordHono } from 'discord-hono'
 import {
+  handleDqCancel,
+  handleDqConfirm,
+  handleDqExecute,
+  handleDqPageNext,
+  handleDqPagePrev,
+  handleDqSelect,
+} from './authoring/deleteHandlers'
+import {
+  DQ_CANCEL,
+  DQ_CONFIRM,
+  DQ_EXECUTE,
+  DQ_PAGE_NEXT,
+  DQ_PAGE_PREV,
+  DQ_SELECT,
+} from './authoring/deleteMessages'
+import {
   handleAqModal,
   handleAqOpen,
   handleAqPageNext,
@@ -106,5 +122,13 @@ app.component(AQ_TF_MARU, (c) => guard(c, () => handleAqTfMaru(c), true))
 app.component(AQ_TF_BATSU, (c) => guard(c, () => handleAqTfBatsu(c), true))
 app.component(AQ_OPEN, (c) => guard(c, () => handleAqOpen(c), true))
 app.modal(AQ_MODAL, (c) => guard(c, () => handleAqModal(c), true))
+
+// クイズ削除GUI
+app.component(DQ_SELECT, (c) => guard(c, () => handleDqSelect(c), true))
+app.component(DQ_PAGE_PREV, (c) => guard(c, () => handleDqPagePrev(c), true))
+app.component(DQ_PAGE_NEXT, (c) => guard(c, () => handleDqPageNext(c), true))
+app.component(DQ_CONFIRM, (c) => guard(c, () => handleDqConfirm(c), true))
+app.component(DQ_EXECUTE, (c) => guard(c, () => handleDqExecute(c), true))
+app.component(DQ_CANCEL, (c) => guard(c, () => handleDqCancel(c), true))
 
 export default app

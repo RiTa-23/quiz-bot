@@ -7,9 +7,7 @@ export const quizCommand = new Command('quiz', 'クイズの作成・出題・�
     new Option('description', 'クイズの説明'),
   ),
   new SubCommand('play', 'クイズの出題設定パネルを開く'),
-  new SubCommand('delete', 'クイズを削除する').options(
-    new Option('quiz_id', 'クイズID').required(),
-  ),
+  new SubCommand('delete', 'クイズを削除する（パネルで選択）'),
   new SubCommand('share', '他サーバーにクイズを共有する').options(
     new Option('quiz_id', 'クイズID').required(),
     new Option('target_guild_id', '共有先サーバーID').required(),

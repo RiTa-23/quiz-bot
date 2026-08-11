@@ -19,6 +19,7 @@ export { normalizeAnswer, isCorrectAnswer } from './play/normalizeAnswer'
 export {
   listPlayableQuizzes,
   listEditableQuizzes,
+  listDeletableQuizzes,
   getSessionQuestions,
   type PlayableQuiz,
 } from './play/session'

@@ -1,6 +1,7 @@
-import { addEditor, addShare, createDb, createQuiz, deleteQuiz } from '@quiz-bot/core'
+import { addEditor, addShare, createDb, createQuiz } from '@quiz-bot/core'
 import type { CommandContext } from 'discord-hono'
 import { actorFromInteraction } from '../actor'
+import { handleDeleteCommand } from '../authoring/deleteHandlers'
 import { handleAddQuestionCommand } from '../authoring/handlers'
 import type { Bindings } from '../env'
 import { handleQuizPlay } from '../session/handlers'
@@ -16,16 +17,16 @@ export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }
         title: v.title ?? '',
         description: v.description ?? null,
       })
-      return c.res(`クイズを作成しました: **${quiz.title}**\nID: \`${quiz.id}\``)
+      return c.res(
+        `クイズを作成しました: **${quiz.title}**\n\`/quiz add-question\` で設問を追加できます。`,
+      )
     }
 
     case 'play':
       return handleQuizPlay(c)
 
-    case 'delete': {
-      await deleteQuiz(db, actor, v.quiz_id ?? '')
-      return c.res('クイズを削除しました。')
-    }
+    case 'delete':
+      return handleDeleteCommand(c)
 
     case 'share': {
       await addShare(db, actor, v.quiz_id ?? '', v.target_guild_id ?? '')
