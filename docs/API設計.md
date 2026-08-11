@@ -110,35 +110,48 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 ## 統計
 
 ### `GET /api/quizzes/:id/stats`
-クイズ単位の統計。
+クイズ単位の統計（`quiz_attempts` 由来＝1人モード）。**閲覧権限が必要**で、権限がなければ `403 FORBIDDEN` を返す。
 
+- 設問一覧には**まだ誰も答えていない設問も含まれる**（`totalAttempts: 0`）
 - Response:
   ```json
   {
+    "quizId": "...",
+    "title": "日本史クイズ",
     "totalAttempts": 120,
+    "correctCount": 74,
     "correctRate": 0.62,
+    "uniqueUserCount": 8,
     "questions": [
-      { "questionId": "...", "totalAttempts": 40, "correctRate": 0.55 }
+      { "questionId": "...", "body": "鎌倉幕府を開いたのは誰か？", "sortOrder": 0,
+        "totalAttempts": 40, "correctCount": 22, "correctRate": 0.55 }
     ]
   }
   ```
 
+> Bot（`/quiz stats`）は同じ関数をサーバー単位に絞って呼ぶため数字が異なる。このAPIは全サーバー合算。
+
 ### `GET /api/guilds/:guildId/stats/ranking`
 サーバー内の**1人モード**正答率ランキング（`quiz_attempts` 由来。Discordの1人モードのプレイ結果とWebプレビューの回答の両方を含む）。
 
-- Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）
+- Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）, `limit`（任意。未指定なら全件）
 - Response: `{ userId, totalAttempts, correctCount, correctRate }[]`
 
-### `GET /api/guilds/:guildId/stats/buzz-ranking`
-サーバー内の**早押し**獲得数ランキング（`buzz_attempts` 由来）。1人モードとは別集計。
-
-- Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）
-- Response: `{ userId, winCount, answeredCount }[]`（`winCount` = 最初に正解した回数）
-
 ### `GET /api/users/:userId/stats`
-ユーザー単位の解答履歴・正答率。ログインユーザー本人のみ取得可。1人モードと早押しを分けて返す。
+ユーザー単位の解答履歴・正答率。ログインユーザー本人のみ取得可。
 
-- Response: `{ solo: { totalAttempts, correctRate, history: QuizAttempt[] }, buzz: { answeredCount, winCount } }`
+- Query: `limit`（履歴の件数上限。既定100・最大500）
+- Response: `{ totalAttempts, correctRate, history: QuizAttempt[] }`
+- **1人モード（`quiz_attempts`）のみ**の集計で、全サーバー横断。早押しは含まない
+
+---
+
+## 未実装（記載のみ）
+
+以下はドキュメント上の構想であり、まだ実装されていない。実装時にこの節から上へ移すこと。
+
+- `GET /api/guilds/:guildId/stats/buzz-ranking` — サーバー内の早押し獲得数ランキング。集計関数 `getBuzzRanking` は `packages/core` に存在するが、APIルートが未作成（DiscordのBot側では `/quiz ranking` で利用中）
+- `GET /api/users/:userId/stats` を `{ solo, buzz }` の形に拡張し、早押し成績も返すこと（ギルド絞り込みの扱いを決める必要がある）
 
 ---
 
