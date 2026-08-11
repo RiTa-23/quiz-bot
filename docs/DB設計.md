@@ -28,7 +28,7 @@ Question 1---N BuzzAttempt    （早押しモードの回答記録）
 | description | TEXT | 説明 |
 | owner_user_id | TEXT NOT NULL | 作成者 Discord ユーザーID |
 | owner_guild_id | TEXT NOT NULL | 作成元 Discord サーバーID |
-| visibility | TEXT NOT NULL DEFAULT 'private' | `private`(サーバー限定) \| `shared` |
+| visibility | TEXT NOT NULL DEFAULT 'private' | `private`（サーバー限定）\| `public`（公開＝他サーバーが追加可能）。値の検証はアプリ側（Drizzleのenum）で行い、DBにCHECK制約は置いていない |
 | created_at | TEXT NOT NULL | ISO8601 |
 | updated_at | TEXT NOT NULL | ISO8601 |
 
@@ -55,18 +55,25 @@ Question 1---N BuzzAttempt    （早押しモードの回答記録）
 - `answers` に複数の正解文字列パターンを保持し、いずれかに一致すれば正解とする
 - 判定時の正規化（トリム・大小文字・全角半角統一など）はアプリケーション側で実施し、DB には正規化前の正解文字列をそのまま保持する
 
-### quiz_shares（他サーバーへの個別共有）
+### quiz_shares（公開クイズをどのサーバーが追加したか）
+
+「そのサーバーが公開クイズを自サーバーに追加した」という事実を表す。**クイズの複製ではなく参照**であり、本文は `quizzes` / `questions` 側にしか存在しない（要件定義.md 2.6 参照）。
 
 | カラム | 型 | 説明 |
 |---|---|---|
 | id | TEXT (uuid) PK | |
-| quiz_id | TEXT NOT NULL FK -> quizzes.id | |
-| target_guild_id | TEXT NOT NULL | 共有先サーバーID |
-| shared_by_user_id | TEXT NOT NULL | 共有操作を行ったユーザーID |
+| quiz_id | TEXT NOT NULL FK -> quizzes.id | 追加した公開クイズ |
+| target_guild_id | TEXT NOT NULL | 追加したサーバーID |
+| shared_by_user_id | TEXT NOT NULL | 追加操作を行ったユーザーID |
 | created_at | TEXT NOT NULL | |
 
-制約: `UNIQUE(quiz_id, target_guild_id)`
-インデックス: `target_guild_id`（「このサーバーに共有されているクイズ一覧」取得用）
+制約: `UNIQUE(quiz_id, target_guild_id)` — 同じクイズを二重に追加できない
+インデックス: `target_guild_id`（「このサーバーが追加したクイズ一覧」取得用）
+
+- 行の作成は `/quiz add-public`（`addPublicQuiz`）、削除は `/quiz remove-public`（`removeAddedQuiz`）
+- 追加できるのは `quizzes.visibility = 'public'` のクイズのみ。ただし**追加後に作成者が `private` に戻してもこの行は残る**ため、既に追加したサーバーでは引き続き利用できる
+- 作成者がクイズを削除すると `ON DELETE CASCADE` でこの行も消える（追加していたサーバーでは使えなくなる）
+- `resolveQuizRole` はこの行の有無を見て `shared` ロールを与える
 
 ### quiz_editors（共同編集者）
 

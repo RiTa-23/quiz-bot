@@ -19,7 +19,7 @@
 ## クイズ
 
 ### `GET /api/quizzes`
-自分が閲覧・編集可能なクイズ一覧（作成分 + 自サーバーへの共有分 + Editor 権限分）を取得。
+自分が閲覧・編集可能なクイズ一覧（作成分 + 自サーバーが追加した公開クイズ + Editor 権限分）を取得。
 
 - Query: `guild_id`（指定時はそのサーバーに紐づくものに絞る）
 - Response: `Quiz[]`（各要素に自分の権限ロール `owner | editor | shared | none` を含める）
@@ -62,15 +62,24 @@
 
 ---
 
-## 共有
+## 公開クイズの追加
+
+共有は「作成者が公開設定にする → 使う側のサーバーが追加する」方式（[要件定義.md](./要件定義.md) 2.6）。**追加する側の操作**なので Owner 権限は不要で、対象クイズが `visibility: 'public'` であることが条件。
+
+公開設定そのものの変更は `PATCH /api/quizzes/:id` の `visibility` で行う（Owner のみ）。
 
 ### `POST /api/quizzes/:id/shares`
-他サーバーへの共有追加。Owner のみ。
+公開クイズを指定サーバーに追加する。
 
 - Body: `{ target_guild_id }`
+- Response: `{ quizId, title }`
+- エラー: 非公開のクイズは `403`、自サーバー発のクイズ／追加済みは `409`
 
-### `DELETE /api/quizzes/:id/shares/:shareId`
-共有解除。Owner のみ。
+### `DELETE /api/quizzes/:id/shares`
+追加した公開クイズをサーバーから外す。元のクイズ自体は削除されない。
+
+- Body: `{ target_guild_id }`
+- 未追加の場合は `404`
 
 ---
 
