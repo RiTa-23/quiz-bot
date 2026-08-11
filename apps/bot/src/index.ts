@@ -1,5 +1,21 @@
 import { AppError } from '@quiz-bot/core'
 import { DiscordHono } from 'discord-hono'
+import {
+  handleAqModal,
+  handleAqOpen,
+  handleAqPageNext,
+  handleAqPagePrev,
+  handleAqQuizSelect,
+  handleAqTypeSelect,
+} from './authoring/handlers'
+import {
+  AQ_MODAL,
+  AQ_OPEN,
+  AQ_PAGE_NEXT,
+  AQ_PAGE_PREV,
+  AQ_QUIZ_SELECT,
+  AQ_TYPE_SELECT,
+} from './authoring/messages'
 import { handleQuizCommand } from './commands/quiz'
 import type { Bindings } from './env'
 import {
@@ -76,5 +92,13 @@ app.component(CFG_PLAY, (c) => guard(c, () => handlePlay(c), true))
 app.component(SESSION_ANSWER, (c) => guard(c, () => handleSessionAnswer(c), true))
 app.component(SESSION_FT_OPEN, (c) => guard(c, () => handleSessionFtOpen(c), true))
 app.modal(SESSION_FT_MODAL, (c) => guard(c, () => handleSessionFtModal(c), true))
+
+// 設問作成GUI
+app.component(AQ_QUIZ_SELECT, (c) => guard(c, () => handleAqQuizSelect(c), true))
+app.component(AQ_TYPE_SELECT, (c) => guard(c, () => handleAqTypeSelect(c), true))
+app.component(AQ_PAGE_PREV, (c) => guard(c, () => handleAqPagePrev(c), true))
+app.component(AQ_PAGE_NEXT, (c) => guard(c, () => handleAqPageNext(c), true))
+app.component(AQ_OPEN, (c) => guard(c, () => handleAqOpen(c), true))
+app.modal(AQ_MODAL, (c) => guard(c, () => handleAqModal(c), true))
 
 export default app

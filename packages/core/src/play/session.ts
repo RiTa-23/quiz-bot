@@ -20,6 +20,18 @@ export async function listPlayableQuizzes(db: Database, actor: Actor): Promise<P
     .map((q) => ({ id: q.id, title: q.title }))
 }
 
+/**
+ * actor が設問を編集できるクイズ（Owner または Editor）を作成日時昇順で返す。
+ * 設問作成GUIのクイズ選択プルダウン用（共有先サーバーは編集不可なので除外）。
+ */
+export async function listEditableQuizzes(db: Database, actor: Actor): Promise<PlayableQuiz[]> {
+  const quizzes = await listQuizzes(db, actor)
+  return quizzes
+    .filter((q) => q.role === 'owner' || q.role === 'editor')
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((q) => ({ id: q.id, title: q.title }))
+}
+
 function toQuestion(row: typeof questions.$inferSelect): Question {
   return {
     id: row.id,

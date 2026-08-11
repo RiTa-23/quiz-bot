@@ -1,6 +1,7 @@
-import { addEditor, addQuestion, addShare, createDb, createQuiz, deleteQuiz } from '@quiz-bot/core'
+import { addEditor, addShare, createDb, createQuiz, deleteQuiz } from '@quiz-bot/core'
 import type { CommandContext } from 'discord-hono'
 import { actorFromInteraction } from '../actor'
+import { handleAddQuestionCommand } from '../authoring/handlers'
 import type { Bindings } from '../env'
 import { handleQuizPlay } from '../session/handlers'
 
@@ -37,27 +38,8 @@ export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }
       return c.res('共同編集者を追加しました。')
     }
 
-    case 'add-question': {
-      const type = (v.type ?? 'free_text') as 'multiple_choice' | 'true_false' | 'free_text'
-      const answers = (v.answers ?? '')
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean)
-      const choices = v.choices
-        ? v.choices
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : null
-      await addQuestion(db, actor, v.quiz_id ?? '', {
-        type,
-        body: v.body ?? '',
-        choices,
-        answers,
-        explanation: v.explanation ?? null,
-      })
-      return c.res('設問を追加しました。')
-    }
+    case 'add-question':
+      return handleAddQuestionCommand(c)
 
     default:
       return c.res('不明なサブコマンドです。')

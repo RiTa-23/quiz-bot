@@ -18,6 +18,7 @@ export { submitAttempt, type SubmitAttemptResult } from './play/submitAttempt'
 export { normalizeAnswer, isCorrectAnswer } from './play/normalizeAnswer'
 export {
   listPlayableQuizzes,
+  listEditableQuizzes,
   getSessionQuestions,
   type PlayableQuiz,
 } from './play/session'

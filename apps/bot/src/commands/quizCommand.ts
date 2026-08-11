@@ -19,12 +19,5 @@ export const quizCommand = new Command('quiz', 'クイズの作成・出題・�
     new Option('target_type', 'guild または user').required(),
     new Option('target_id', 'サーバーIDまたはユーザーID').required(),
   ),
-  new SubCommand('add-question', 'クイズに設問を追加する').options(
-    new Option('quiz_id', 'クイズID').required(),
-    new Option('type', 'multiple_choice / true_false / free_text').required(),
-    new Option('body', '問題文').required(),
-    new Option('answers', '正解パターン（カンマ区切り）').required(),
-    new Option('choices', '選択肢（カンマ区切り、4択のみ）'),
-    new Option('explanation', '解説'),
-  ),
+  new SubCommand('add-question', 'クイズに設問を追加する（パネルで入力）'),
 )
