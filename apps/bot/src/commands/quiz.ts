@@ -17,9 +17,10 @@ export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }
         title: v.title ?? '',
         description: v.description ?? null,
       })
-      return c.res(
-        `クイズを作成しました: **${quiz.title}**\n\`/quiz add-question\` で設問を追加できます。`,
-      )
+      const lines = [`クイズを作成しました: **${quiz.title}**`]
+      if (quiz.description) lines.push(`> ${quiz.description}`)
+      lines.push('`/quiz add-question` で設問を追加できます。')
+      return c.res(lines.join('\n'))
     }
 
     case 'play':

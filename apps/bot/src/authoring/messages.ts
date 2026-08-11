@@ -38,7 +38,7 @@ export type AddQuestionState = { quizId: string; type: string; page: number; tf:
 
 /** 設問作成パネル。選択状態は AQ_OPEN ボタンの custom_id に埋め込んで保持する。 */
 export function buildAddQuestionPanel(
-  allQuizzes: { id: string; title: string }[],
+  allQuizzes: { id: string; title: string; description: string | null }[],
   state: AddQuestionState,
 ): { content: string; components: Components } {
   const totalPages = Math.max(1, Math.ceil(allQuizzes.length / PAGE_SIZE))
@@ -53,6 +53,7 @@ export function buildAddQuestionPanel(
         label: q.title.slice(0, 100),
         value: q.id,
         default: q.id === state.quizId,
+        ...(q.description ? { description: q.description.slice(0, 100) } : {}),
       })),
     ),
   )
@@ -88,8 +89,10 @@ export function buildAddQuestionPanel(
     ),
   )
 
-  const selectedTitle = allQuizzes.find((q) => q.id === state.quizId)?.title ?? '（未選択）'
-  const lines = ['**設問の追加**', `クイズ: ${selectedTitle}`, `出題形式: ${typeLabel(state.type)}`]
+  const selected = allQuizzes.find((q) => q.id === state.quizId)
+  const lines = ['**設問の追加**', `クイズ: ${selected?.title ?? '（未選択）'}`]
+  if (selected?.description) lines.push(`> ${selected.description}`)
+  lines.push(`出題形式: ${typeLabel(state.type)}`)
   if (state.type === 'true_false') lines.push(`正解: ${state.tf || '（未選択）'}`)
   lines.push('選択したら「設問を入力」を押してください。')
 

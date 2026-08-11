@@ -12,13 +12,14 @@ export type PublicSessionQuestion = {
 
 /** 出題設定GUIの表示モデル。 */
 export type DraftView = {
-  quizzes: { id: string; title: string }[] // 現在ページのクイズ
+  quizzes: { id: string; title: string; description: string | null }[] // 現在ページのクイズ
   page: number
   hasPrev: boolean
   hasNext: boolean
   totalQuizzes: number
   selectedQuizId: string | null
   selectedQuizTitle: string | null
+  selectedQuizDescription: string | null
   /** 選択中クイズの設問数（出題数プルダウンの上限） */
   questionCount: number
   count: number

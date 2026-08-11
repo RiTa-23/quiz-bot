@@ -52,6 +52,7 @@ export function buildConfigPanel(view: DraftView): { content: string; components
       label: q.title.slice(0, 100),
       value: q.id,
       default: q.id === view.selectedQuizId,
+      ...(q.description ? { description: q.description.slice(0, 100) } : {}),
     })),
   )
   components.row(select)
@@ -79,15 +80,18 @@ export function buildConfigPanel(view: DraftView): { content: string; components
     new Button(CFG_PLAY, '▶ Play', 'Success'),
   )
 
-  const content = [
+  const lines = [
     '**クイズ設定**',
     `クイズ: ${view.selectedQuizTitle ?? '（未選択）'}（全${view.questionCount}問）`,
+  ]
+  if (view.selectedQuizDescription) lines.push(`> ${view.selectedQuizDescription}`)
+  lines.push(
     `出題数: ${view.count}`,
     `プレイ形式: ${modeLabel(view.mode)}`,
     '設定したら **Play** を押してください。',
-  ].join('\n')
+  )
 
-  return { content, components }
+  return { content: lines.join('\n'), components }
 }
 
 function answerComponents(q: PublicSessionQuestion, messageId: string): Components {

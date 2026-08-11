@@ -129,6 +129,7 @@ export class QuizSession extends DurableObject<Bindings> {
       totalQuizzes,
       selectedQuizId: selected?.id ?? null,
       selectedQuizTitle: selected?.title ?? null,
+      selectedQuizDescription: selected?.description ?? null,
       questionCount,
       count: s.count,
       mode: s.mode,

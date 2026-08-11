@@ -6,7 +6,15 @@ import { listQuizzes } from '../quiz/listQuizzes'
 import { assertCanPlay, getQuizOrThrow, resolveQuizRole } from '../quiz/permissions'
 import type { Actor, Question } from '../types'
 
-export type PlayableQuiz = { id: string; title: string }
+export type PlayableQuiz = { id: string; title: string; description: string | null }
+
+function toPlayableQuiz(q: {
+  id: string
+  title: string
+  description: string | null
+}): PlayableQuiz {
+  return { id: q.id, title: q.title, description: q.description }
+}
 
 /**
  * そのサーバーで出題可能なクイズ（自サーバー作成 + 共有 + Editor権限）を作成日時昇順で返す。
@@ -17,7 +25,7 @@ export async function listPlayableQuizzes(db: Database, actor: Actor): Promise<P
   return quizzes
     .filter((q) => q.role !== 'none')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((q) => ({ id: q.id, title: q.title }))
+    .map(toPlayableQuiz)
 }
 
 /**
@@ -29,7 +37,7 @@ export async function listEditableQuizzes(db: Database, actor: Actor): Promise<P
   return quizzes
     .filter((q) => q.role === 'owner' || q.role === 'editor')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((q) => ({ id: q.id, title: q.title }))
+    .map(toPlayableQuiz)
 }
 
 /**
@@ -42,7 +50,7 @@ export async function listDeletableQuizzes(db: Database, actor: Actor): Promise<
   return quizzes
     .filter((q) => q.role === 'owner')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((q) => ({ id: q.id, title: q.title }))
+    .map(toPlayableQuiz)
 }
 
 /** クイズの設問数を返す（出題数プルダウンの上限算出用）。 */

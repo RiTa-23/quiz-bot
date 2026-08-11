@@ -14,7 +14,7 @@ export type DeleteState = { quizId: string; page: number }
 
 /** 削除対象を選ぶパネル。選択状態は DQ_CONFIRM ボタンの custom_id に埋め込む。 */
 export function buildDeletePanel(
-  allQuizzes: { id: string; title: string }[],
+  allQuizzes: { id: string; title: string; description: string | null }[],
   state: DeleteState,
 ): { content: string; components: Components } {
   const totalPages = Math.max(1, Math.ceil(allQuizzes.length / PAGE_SIZE))
@@ -29,6 +29,7 @@ export function buildDeletePanel(
         label: q.title.slice(0, 100),
         value: q.id,
         default: q.id === state.quizId,
+        ...(q.description ? { description: q.description.slice(0, 100) } : {}),
       })),
     ),
   )
@@ -44,14 +45,12 @@ export function buildDeletePanel(
     new Button(DQ_CONFIRM, '🗑 このクイズを削除', 'Danger').custom_id(`${state.quizId}:${page}`),
   )
 
-  const selectedTitle = allQuizzes.find((q) => q.id === state.quizId)?.title ?? '（未選択）'
-  const content = [
-    '**クイズの削除**',
-    `対象: ${selectedTitle}`,
-    '削除するクイズを選んでボタンを押してください。',
-  ].join('\n')
+  const selected = allQuizzes.find((q) => q.id === state.quizId)
+  const lines = ['**クイズの削除**', `対象: ${selected?.title ?? '（未選択）'}`]
+  if (selected?.description) lines.push(`> ${selected.description}`)
+  lines.push('削除するクイズを選んでボタンを押してください。')
 
-  return { content, components }
+  return { content: lines.join('\n'), components }
 }
 
 /** 削除前の最終確認。 */
