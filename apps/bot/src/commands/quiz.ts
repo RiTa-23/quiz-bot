@@ -30,7 +30,10 @@ export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }
       })
       const lines = [`クイズを作成しました: **${quiz.title}**`]
       if (quiz.description) lines.push(`> ${quiz.description}`)
-      lines.push('`/quiz add-question` で設問を追加できます。')
+      lines.push(
+        '`/quiz add-question` で設問を追加できます。',
+        '編集はこのサーバーの全員に許可されています（`/quiz editors` で変更できます）。',
+      )
       return c.res(lines.join('\n'))
     }
 

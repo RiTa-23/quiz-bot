@@ -52,6 +52,7 @@ const createQuizSchema = z.object({
   description: z.string().nullable().optional(),
   owner_guild_id: z.string(),
   visibility: z.enum(['private', 'public']).optional(),
+  allow_guild_edit: z.boolean().optional(),
 })
 
 quizzesRoutes.post('/', async (c) => {
@@ -63,6 +64,7 @@ quizzesRoutes.post('/', async (c) => {
       title: body.title,
       description: body.description,
       visibility: body.visibility,
+      allowGuildEdit: body.allow_guild_edit,
     })
     return c.json(quiz, 201)
   } catch (error) {

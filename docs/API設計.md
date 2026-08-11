@@ -30,8 +30,9 @@
 ### `POST /api/quizzes`
 クイズ作成。
 
-- Body: `{ title, description?, owner_guild_id, visibility? }`
+- Body: `{ title, description?, owner_guild_id, visibility?, allow_guild_edit? }`
 - Response: `Quiz`
+- 既定で `owner_guild_id` のサーバー全員に編集権限が付与される（`quiz_editors` に guild 行が1件作られる）。作成者だけに絞る場合は `allow_guild_edit: false` を指定する
 
 ### `GET /api/quizzes/:id`
 クイズ詳細取得（設問一覧を含む）。

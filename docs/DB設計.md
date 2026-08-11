@@ -78,6 +78,8 @@ Question 1---N BuzzAttempt    （早押しモードの回答記録）
 
 ### quiz_editors（共同編集者）
 
+クイズ作成時に、作成元サーバーに対する行（`target_type='guild'`）が**自動で1件挿入される**（既定で作成元サーバーの全員が編集できる。要件定義.md 2.5）。`/quiz editors` でオフにすると削除される。
+
 | カラム | 型 | 説明 |
 |---|---|---|
 | id | TEXT (uuid) PK | |
