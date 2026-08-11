@@ -85,7 +85,7 @@ Question 1---N BuzzAttempt    （早押しモードの回答記録）
 
 ### quiz_attempts（出題・回答履歴）
 
-出題結果の統計表示（要件2.7）と、不正回答対策（1設問1回まで）の両方の基盤となるテーブル。
+1人モードの回答履歴を記録するテーブル。出題結果の統計表示（要件2.7）と、Webプレビューの不正回答対策（1設問1回まで）の基盤となる。
 
 | カラム | 型 | 説明 |
 |---|---|---|
@@ -97,9 +97,16 @@ Question 1---N BuzzAttempt    （早押しモードの回答記録）
 | is_correct | INTEGER NOT NULL | 0/1 |
 | submitted_answer | TEXT | 自由記述の場合の回答内容（統計・不正検知用） |
 | answered_at | TEXT NOT NULL | ISO8601 |
+| session_id | TEXT | 1人モードのセッションID。**NULL は Web のプレビュー経由**の回答を表す |
 
-制約: `UNIQUE(question_id, guild_id, user_id)` — 同一設問への複数回回答を防止（不正回答対策）
-インデックス: `quiz_id`（クイズ単位集計）, `(guild_id, user_id)`（サーバー内ランキング集計）, `user_id`（ユーザー単位の履歴集計）
+制約: `UNIQUE(question_id, guild_id, user_id) WHERE session_id IS NULL` — **部分ユニークインデックス**。
+プレビュー経由の回答についてのみ「1設問1回まで」を強制する（不正回答対策）。1人モードは同じクイズを繰り返しプレイできる必要があるため、`session_id` を持つ行はこの制約の対象外とし、セッションごとに重複記録できる。
+
+インデックス: `quiz_id`（クイズ単位集計）, `(guild_id, user_id)`（サーバー内ランキング集計）, `user_id`（ユーザー単位の履歴集計）, `session_id`
+
+**記録のタイミング**
+- 1人モード: `QuizSession`（Durable Object）が回答のたびに `packages/core` 経由で1行書き込む。セッションを途中で放棄しても、それまでの回答は残る
+- Webのプレビュー実行: `POST /api/quizzes/:id/questions/:qid/attempts`（`session_id` は NULL）
 
 **統計表示への利用イメージ**
 - クイズ単位の正答率: `SELECT AVG(is_correct) FROM quiz_attempts WHERE quiz_id = ?`
@@ -126,7 +133,7 @@ Question 1---N BuzzAttempt    （早押しモードの回答記録）
 
 ### buzz_attempts（早押しモードの回答記録）
 
-早押しモードの回答結果を記録する。1人モードの `quiz_attempts` とは分離し、早押し固有の属性（セッション・勝者フラグ）を持つ（要件定義.md 2.7 参照）。`quiz_attempts` の「1設問1回」制約は適用しない（早押しは同じ設問が別セッションで再出題されうるため）。
+早押しモードの回答結果を記録する。1人モードの `quiz_attempts` とは分離し、早押し固有の属性（勝者フラグ）を持つ（要件定義.md 2.7 参照）。同じ設問が別セッションで再出題されうるため、ユニーク制約は持たない。
 
 | カラム | 型 | 説明 |
 |---|---|---|
@@ -164,9 +171,19 @@ DO内SQLiteのスキーマ（`QuizSession` が内部で持つテーブル）は 
 
 ---
 
+## 削除時の連鎖（回答記録の扱い）
+
+`quiz_attempts` / `buzz_attempts` はいずれも `quiz_id` / `question_id` に `ON DELETE CASCADE` を持ち、D1でも外部キーは有効（`PRAGMA foreign_keys = 1`）。
+
+- クイズを削除すると、そのクイズの回答記録（ソロ・早押しとも）が連鎖削除される
+- 設問を1件削除すると、その設問の回答記録が連鎖削除される
+
+孤児レコードを作らず実装をシンプルに保つため、**この挙動を意図的に採用している**。トレードオフとして、クイズを削除するとそこで得た成績はランキング等から失われる（要件定義.md 2.7 参照）。長期の成績保持が必要になった場合は、クイズのソフトデリート化または外部キーの見直しを検討する。
+
 ## マイグレーション方針
 
 - Cloudflare D1 のマイグレーション機能（`wrangler d1 migrations`）を使用し、`migrations/0001_init.sql` のような連番ファイルで管理する
 - 初期マイグレーション（`0001_init.sql`）で最初の6テーブル（quizzes / questions / quiz_shares / quiz_editors / quiz_attempts / rate_limits）を作成済み
-- `buzz_attempts` は早押し機能の実装時に後続マイグレーション（例: `0002_buzz_attempts.sql`）で追加する
+- `buzz_attempts` は早押し機能の実装時に後続マイグレーション（`0002_buzz_attempts.sql`）で追加した
+- `0003_quiz_attempts_session.sql` で `quiz_attempts` に `session_id` を追加し、旧 `UNIQUE(question_id, guild_id, user_id)` を破棄して `WHERE session_id IS NULL` 付きの部分ユニークインデックスに置き換えた（1人モードの恒久記録対応）
 - Durable Object（`QuizSession`）のSQLiteは D1 マイグレーションの対象外。DOクラスは `apps/bot` の `wrangler.jsonc` で `new_sqlite_classes` として登録する（[アーキテクチャ.md](./アーキテクチャ.md) 参照）

@@ -102,7 +102,7 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 - Body: `{ guild_id, user_id, submitted_answer }`
 - Response: `{ isCorrect, correctAnswers, explanation }`
   - 正解発表のタイミングでのみ `correctAnswers` を返す
-- 制約: 同一 `(question_id, guild_id, user_id)` で既に回答済みの場合は `409 Conflict`（1設問1回まで）
+- 制約: 同一 `(question_id, guild_id, user_id)` で**プレビュー経由の**回答が既にある場合は `409 Conflict`（1設問1回まで）。Discordの1人モードで記録された行（`session_id` 付き）は判定対象に含めないため、ソロでプレイ済みの設問でもプレビューは実行できる
 - レート制限: 同一 `user_id` からの短時間連投は `429 Too Many Requests`
 
 ---
@@ -124,7 +124,7 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
   ```
 
 ### `GET /api/guilds/:guildId/stats/ranking`
-サーバー内の**1人モード**正答率ランキング（`quiz_attempts` 由来）。
+サーバー内の**1人モード**正答率ランキング（`quiz_attempts` 由来。Discordの1人モードのプレイ結果とWebプレビューの回答の両方を含む）。
 
 - Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）
 - Response: `{ userId, totalAttempts, correctCount, correctRate }[]`
