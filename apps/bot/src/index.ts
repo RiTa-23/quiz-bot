@@ -61,6 +61,9 @@ import {
   SESSION_FT_OPEN,
 } from './session/messages'
 
+import { handleQsPageNext, handleQsPagePrev, handleQsSelect } from './stats/statsHandlers'
+import { QS_PAGE_NEXT, QS_PAGE_PREV, QS_SELECT } from './stats/statsMessages'
+
 export { QuizSession } from './session/QuizSession'
 
 const ERROR_MESSAGES: Record<AppError['code'], string> = {
@@ -127,5 +130,10 @@ app.component(DQ_PAGE_NEXT, (c) => guard(c, () => handleDqPageNext(c), true))
 app.component(DQ_CONFIRM, (c) => guard(c, () => handleDqConfirm(c), true))
 app.component(DQ_EXECUTE, (c) => guard(c, () => handleDqExecute(c), true))
 app.component(DQ_CANCEL, (c) => guard(c, () => handleDqCancel(c), true))
+
+// 統計GUI
+app.component(QS_SELECT, (c) => guard(c, () => handleQsSelect(c), true))
+app.component(QS_PAGE_PREV, (c) => guard(c, () => handleQsPagePrev(c), true))
+app.component(QS_PAGE_NEXT, (c) => guard(c, () => handleQsPageNext(c), true))
 
 export default app

@@ -29,7 +29,8 @@ statsRoutes.get('/users/:userId/stats', async (c) => {
       )
     }
     const db = createDb(c.env.DB)
-    const stats = await getUserStats(db, c.req.param('userId'))
+    const limit = Math.min(Number(c.req.query('limit') ?? 100) || 100, 500)
+    const stats = await getUserStats(db, c.req.param('userId'), { limit })
     return c.json(stats)
   } catch (error) {
     return handleApiError(c, error)

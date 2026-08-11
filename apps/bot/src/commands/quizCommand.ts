@@ -18,4 +18,7 @@ export const quizCommand = new Command('quiz', 'クイズの作成・出題・�
     new Option('target_id', 'サーバーIDまたはユーザーID').required(),
   ),
   new SubCommand('add-question', 'クイズに設問を追加する（パネルで入力）'),
+  new SubCommand('stats', 'クイズごとの成績を見る'),
+  new SubCommand('my-stats', 'このサーバーでの自分の成績を見る'),
+  new SubCommand('ranking', 'このサーバーのランキングを見る'),
 )

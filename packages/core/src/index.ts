@@ -25,7 +25,12 @@ export {
   type PlayableQuiz,
 } from './play/session'
 
-export { getQuizStats, type QuizStats } from './stats/quizStats'
+export { getQuizStats, type QuizStats, type QuizQuestionStats } from './stats/quizStats'
+export {
+  getMemberStats,
+  type MemberStats,
+  type MemberQuizBreakdown,
+} from './stats/memberStats'
 export { getGuildRanking, type RankingEntry, type RankingPeriod } from './stats/guildRanking'
 export { getUserStats, type UserStats } from './stats/userStats'
 export {

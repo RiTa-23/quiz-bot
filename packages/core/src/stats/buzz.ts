@@ -58,23 +58,26 @@ function periodStart(period: RankingPeriod): string | null {
 export async function getBuzzRanking(
   db: Database,
   guildId: string,
-  options?: { quizId?: string; period?: RankingPeriod },
+  options?: { quizId?: string; period?: RankingPeriod; limit?: number },
 ): Promise<BuzzRankingEntry[]> {
   const conditions = [eq(buzzAttempts.guildId, guildId)]
   if (options?.quizId) conditions.push(eq(buzzAttempts.quizId, options.quizId))
   const since = periodStart(options?.period ?? 'all')
   if (since) conditions.push(gte(buzzAttempts.answeredAt, since))
 
-  const rows = await db
+  const query = db
     .select({
       userId: buzzAttempts.userId,
-      winCount: sql<number>`sum(${buzzAttempts.isWinner})`,
+      winCount: sql<number>`coalesce(sum(${buzzAttempts.isWinner}), 0)`,
       answeredCount: sql<number>`count(*)`,
     })
     .from(buzzAttempts)
     .where(and(...conditions))
     .groupBy(buzzAttempts.userId)
-    .orderBy(desc(sql`sum(${buzzAttempts.isWinner})`))
+    // 上位N件で切るときに順位がぶれないよう、同点は回答数→userIdでタイブレークする
+    .orderBy(desc(sql`sum(${buzzAttempts.isWinner})`), desc(sql`count(*)`), buzzAttempts.userId)
+
+  const rows = await (options?.limit ? query.limit(options.limit) : query)
 
   return rows.map((r) => ({
     userId: r.userId,

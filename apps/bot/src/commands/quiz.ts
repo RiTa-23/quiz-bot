@@ -5,6 +5,11 @@ import { handleDeleteCommand } from '../authoring/deleteHandlers'
 import { handleAddQuestionCommand } from '../authoring/handlers'
 import type { Bindings } from '../env'
 import { handleQuizPlay } from '../session/handlers'
+import {
+  handleMyStatsCommand,
+  handleRankingCommand,
+  handleStatsCommand,
+} from '../stats/statsHandlers'
 
 export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }>) {
   const v = c.var as Record<string, string | undefined>
@@ -42,6 +47,15 @@ export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }
 
     case 'add-question':
       return handleAddQuestionCommand(c)
+
+    case 'stats':
+      return handleStatsCommand(c)
+
+    case 'my-stats':
+      return handleMyStatsCommand(c)
+
+    case 'ranking':
+      return handleRankingCommand(c)
 
     default:
       return c.res('不明なサブコマンドです。')

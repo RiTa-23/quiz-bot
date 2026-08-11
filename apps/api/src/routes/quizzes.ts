@@ -254,7 +254,7 @@ quizzesRoutes.post('/:id/questions/:qid/attempts', async (c) => {
 quizzesRoutes.get('/:id/stats', async (c) => {
   try {
     const db = createDb(c.env.DB)
-    const stats = await getQuizStats(db, c.req.param('id'))
+    const stats = await getQuizStats(db, actorOf(c), c.req.param('id'))
     return c.json(stats)
   } catch (error) {
     return handleApiError(c, error)

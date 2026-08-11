@@ -17,7 +17,15 @@ export type UserStats = {
   history: UserAttemptHistoryItem[]
 }
 
-export async function getUserStats(db: Database, userId: string): Promise<UserStats> {
+/**
+ * ユーザー単位の解答履歴・正答率（Web API用）。
+ * 全サーバー横断で集計する点に注意（Discord側はギルド内に限定した getMemberStats を使う）。
+ */
+export async function getUserStats(
+  db: Database,
+  userId: string,
+  options?: { limit?: number },
+): Promise<UserStats> {
   const summary = await db
     .select({
       totalAttempts: sql<number>`count(*)`,
@@ -41,6 +49,7 @@ export async function getUserStats(db: Database, userId: string): Promise<UserSt
     .from(quizAttempts)
     .where(eq(quizAttempts.userId, userId))
     .orderBy(desc(quizAttempts.answeredAt))
+    .limit(options?.limit ?? 100)
 
   return {
     totalAttempts,
