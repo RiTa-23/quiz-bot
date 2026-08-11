@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
+import { index, integer, sqliteTable, text, unique, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 const nowIso = () => sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
 
@@ -96,16 +96,19 @@ export const quizAttempts = sqliteTable(
     isCorrect: integer('is_correct', { mode: 'boolean' }).notNull(),
     submittedAnswer: text('submitted_answer'),
     answeredAt: text('answered_at').notNull().default(nowIso()),
+    // null = Webプレビュー経由の回答 / 非null = 1人モードセッションの回答
+    sessionId: text('session_id'),
   },
   (table) => [
-    unique('quiz_attempts_question_guild_user_unique').on(
-      table.questionId,
-      table.guildId,
-      table.userId,
-    ),
+    // 「1設問1回まで」はプレビュー経由の回答にのみ適用する。
+    // 1人モードは同じクイズを繰り返し遊べるため、セッションごとに重複記録を許す。
+    uniqueIndex('quiz_attempts_preview_question_guild_user_unique')
+      .on(table.questionId, table.guildId, table.userId)
+      .where(sql`${table.sessionId} is null`),
     index('quiz_attempts_quiz_id_idx').on(table.quizId),
     index('quiz_attempts_guild_user_idx').on(table.guildId, table.userId),
     index('quiz_attempts_user_id_idx').on(table.userId),
+    index('quiz_attempts_session_id_idx').on(table.sessionId),
   ],
 )
 

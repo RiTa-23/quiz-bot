@@ -34,5 +34,6 @@ export {
   type BuzzAttemptRecord,
   type BuzzRankingEntry,
 } from './stats/buzz'
+export { recordSoloAttempts, type SoloAttemptRecord } from './stats/solo'
 
 export { checkRateLimit, type RateLimitScope } from './rate-limit/rateLimit'

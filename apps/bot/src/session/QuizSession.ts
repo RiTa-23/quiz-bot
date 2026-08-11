@@ -3,12 +3,14 @@ import {
   type Actor,
   type BuzzAttemptRecord,
   type Question,
+  type SoloAttemptRecord,
   countQuizQuestions,
   createDb,
   getSessionQuestions,
   isCorrectAnswer,
   listPlayableQuizzes,
   recordBuzzAttempts,
+  recordSoloAttempts,
 } from '@quiz-bot/core'
 import type { Bindings } from '../env'
 import { editChannelMessage } from './discordRest'
@@ -53,6 +55,9 @@ type State = {
   index: number
   // solo
   soloCorrect: number
+  // D1へ未送信のソロ回答。書き込み失敗時に次の回答で再送するためのバッファ。
+  // デプロイを跨いだ既存セッションには存在しないため optional。
+  soloPending?: SoloAttemptRecord[]
   // buzz (current question)
   buzzClosed: boolean
   buzzAnswered: string[]
@@ -153,6 +158,7 @@ export class QuizSession extends DurableObject<Bindings> {
       questions: [],
       index: 0,
       soloCorrect: 0,
+      soloPending: [],
       buzzClosed: false,
       buzzAnswered: [],
       pending: [],
@@ -205,6 +211,7 @@ export class QuizSession extends DurableObject<Bindings> {
     s.status = 'active'
     s.messageId = messageId
     s.soloCorrect = 0
+    s.soloPending = []
     s.buzzScores = {}
     this.resetQuestionState()
     await this.save()
@@ -266,6 +273,21 @@ export class QuizSession extends DurableObject<Bindings> {
     if (s.mode === 'solo') {
       if (userId !== s.hostUserId) return { kind: 'ignored', reason: 'not-host' }
       if (correct) s.soloCorrect += 1
+
+      if (s.quizId) {
+        const buf = (s.soloPending ??= [])
+        buf.push({
+          sessionId: s.sessionId,
+          quizId: s.quizId,
+          guildId: s.guildId,
+          questionId: q.id,
+          userId,
+          isCorrect: correct,
+          submittedAnswer: submitted,
+        })
+        await this.flushSoloPending()
+      }
+
       const next = this.buildNext()
       this.resetQuestionState()
       await this.save()
@@ -314,6 +336,21 @@ export class QuizSession extends DurableObject<Bindings> {
       correctAnswers: q.answers,
       explanation: q.explanation,
       next,
+    }
+  }
+
+  /**
+   * ソロの回答をD1へ書き込む。ユーザーのInteraction応答パス上で呼ばれるため、
+   * 失敗してもプレイを止めない（バッファに残し次の回答時に再送する）。
+   */
+  private async flushSoloPending(): Promise<void> {
+    const s = this.state
+    if (!s?.soloPending?.length) return
+    try {
+      await recordSoloAttempts(createDb(this.env.DB), s.soloPending)
+      s.soloPending = []
+    } catch (error) {
+      console.error('recordSoloAttempts failed', error)
     }
   }
 
