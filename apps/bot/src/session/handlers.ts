@@ -4,10 +4,8 @@ import { actorFromInteraction } from '../actor'
 import type { Bindings } from '../env'
 import { editChannelMessage } from './discordRest'
 import {
-  COUNT_INPUT,
   FT_INPUT,
   buildConfigPanel,
-  buildCountModal,
   buildFreetextModal,
   buildSessionQuestion,
   buildSummary,
@@ -77,18 +75,11 @@ export async function handleModeToggle(c: ComponentContext<{ Bindings: Bindings 
   return c.resUpdate(buildConfigPanel(await stub.toggleMode()))
 }
 
-export function handleCountOpen(c: ComponentContext<{ Bindings: Bindings }>) {
-  return c.resModal(buildCountModal(50))
-}
-
-export async function handleCountModal(c: ModalContext<{ Bindings: Bindings }>) {
-  const raw = (c.var as Record<string, string | undefined>)[COUNT_INPUT] ?? '1'
-  const n = Number.parseInt(raw, 10)
+export async function handleCountSelect(c: ComponentContext<{ Bindings: Bindings }>) {
+  const value = (c.interaction.data as { values?: string[] }).values?.[0] ?? '1'
   const { stub } = stubFromComponent(c)
-  const view = await stub.setCount(n)
-  return c
-    .ephemeral()
-    .res(`出題数を ${view.count} 問に設定しました。（パネルは次の操作で更新されます）`)
+  const view = await stub.setCount(Number.parseInt(value, 10))
+  return c.resUpdate(buildConfigPanel(view))
 }
 
 export async function handlePlay(c: ComponentContext<{ Bindings: Bindings }>) {

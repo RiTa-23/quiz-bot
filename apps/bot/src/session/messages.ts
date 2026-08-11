@@ -6,20 +6,41 @@ export const CFG_QUIZ_SELECT = 'cqs' // クイズ選択プルダウン
 export const CFG_PAGE_PREV = 'cpp' // 前ページ
 export const CFG_PAGE_NEXT = 'cpn' // 次ページ
 export const CFG_MODE_TOGGLE = 'cmt' // プレイ形式トグル
-export const CFG_COUNT_OPEN = 'cco' // 出題数モーダルを開く
-export const CFG_COUNT_MODAL = 'ccm' // 出題数モーダル送信
+export const CFG_COUNT_SELECT = 'ccs' // 出題数プルダウン
 export const CFG_PLAY = 'cpl' // Play開始
 
 export const SESSION_ANSWER = 'sba' // セッション: 4択/○×ボタン回答（data = questionId:idx）
 export const SESSION_FT_OPEN = 'sfo' // セッション: 自由記述モーダルを開く（data = questionId:messageId）
 export const SESSION_FT_MODAL = 'sfm' // セッション: 自由記述モーダル送信（data = questionId:messageId）
-export const COUNT_INPUT = 'count'
 export const FT_INPUT = 'answer'
 
 const TRUE_FALSE_LABELS = ['⭕ ○', '❌ ×']
 
 function modeLabel(mode: DraftView['mode']): string {
   return mode === 'solo' ? '1人' : 'みんなで早押し'
+}
+
+/**
+ * 出題数プルダウンの選択肢を作る。Discordの上限25件に収めるため、
+ * 少ない数は1刻み、多い数は区切りのよい値のみを出す。
+ */
+function countOptions(max: number): number[] {
+  const candidates = [
+    ...Array.from({ length: 10 }, (_, i) => i + 1),
+    15,
+    20,
+    25,
+    30,
+    35,
+    40,
+    45,
+    50,
+  ]
+  const usable = candidates.filter((n) => n <= max)
+  if (usable.length === 0) return [1]
+  // 上限値そのものも選べるようにする
+  if (!usable.includes(max)) usable.push(max)
+  return usable.slice(0, 25)
 }
 
 /** 出題設定GUIメッセージを組み立てる。 */
@@ -42,28 +63,31 @@ export function buildConfigPanel(view: DraftView): { content: string; components
     )
   }
 
+  const max = Math.min(view.questionCount || 1, 50)
+  components.row(
+    new Select(CFG_COUNT_SELECT, 'String').options(
+      ...countOptions(max).map((n) => ({
+        label: `出題数: ${n}問`,
+        value: String(n),
+        default: n === view.count,
+      })),
+    ),
+  )
+
   components.row(
     new Button(CFG_MODE_TOGGLE, `形式: ${modeLabel(view.mode)}`, 'Secondary'),
-    new Button(CFG_COUNT_OPEN, `出題数: ${view.count}`, 'Secondary'),
+    new Button(CFG_PLAY, '▶ Play', 'Success'),
   )
-  components.row(new Button(CFG_PLAY, '▶ Play', 'Success'))
 
   const content = [
     '**クイズ設定**',
-    `クイズ: ${view.selectedQuizTitle ?? '（未選択）'}`,
+    `クイズ: ${view.selectedQuizTitle ?? '（未選択）'}（全${view.questionCount}問）`,
     `出題数: ${view.count}`,
     `プレイ形式: ${modeLabel(view.mode)}`,
     '設定したら **Play** を押してください。',
   ].join('\n')
 
   return { content, components }
-}
-
-/** 出題数入力モーダル。 */
-export function buildCountModal(questionMax: number): Modal {
-  return new Modal(CFG_COUNT_MODAL, '出題数を設定').row(
-    new TextInput(COUNT_INPUT, `出題数（1〜${questionMax}）`, 'Single').required(),
-  )
 }
 
 function answerComponents(q: PublicSessionQuestion, messageId: string): Components {

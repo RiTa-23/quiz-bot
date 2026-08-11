@@ -21,6 +21,7 @@ export {
   listEditableQuizzes,
   listDeletableQuizzes,
   getSessionQuestions,
+  countQuizQuestions,
   type PlayableQuiz,
 } from './play/session'
 

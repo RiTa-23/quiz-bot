@@ -3,6 +3,7 @@ import {
   type Actor,
   type BuzzAttemptRecord,
   type Question,
+  countQuizQuestions,
   createDb,
   getSessionQuestions,
   isCorrectAnswer,
@@ -115,6 +116,11 @@ export class QuizSession extends DurableObject<Bindings> {
     if (s.page > maxPage) s.page = maxPage
     const pageItems = all.slice(s.page * PAGE_SIZE, s.page * PAGE_SIZE + PAGE_SIZE)
     const selected = all.find((q) => q.id === s.quizId) ?? null
+
+    const questionCount = selected ? await countQuizQuestions(db, selected.id) : 0
+    // 選択中クイズの設問数を超える出題数は自動で丸める
+    if (questionCount > 0 && s.count > questionCount) s.count = questionCount
+
     return {
       quizzes: pageItems,
       page: s.page,
@@ -123,6 +129,7 @@ export class QuizSession extends DurableObject<Bindings> {
       totalQuizzes,
       selectedQuizId: selected?.id ?? null,
       selectedQuizTitle: selected?.title ?? null,
+      questionCount,
       count: s.count,
       mode: s.mode,
     }

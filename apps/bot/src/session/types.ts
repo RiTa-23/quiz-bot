@@ -19,6 +19,8 @@ export type DraftView = {
   totalQuizzes: number
   selectedQuizId: string | null
   selectedQuizTitle: string | null
+  /** 選択中クイズの設問数（出題数プルダウンの上限） */
+  questionCount: number
   count: number
   mode: Mode
 }

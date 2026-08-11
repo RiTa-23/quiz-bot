@@ -39,8 +39,7 @@ import {
 import { handleQuizCommand } from './commands/quiz'
 import type { Bindings } from './env'
 import {
-  handleCountModal,
-  handleCountOpen,
+  handleCountSelect,
   handleModeToggle,
   handlePageNext,
   handlePagePrev,
@@ -51,8 +50,7 @@ import {
   handleSessionFtOpen,
 } from './session/handlers'
 import {
-  CFG_COUNT_MODAL,
-  CFG_COUNT_OPEN,
+  CFG_COUNT_SELECT,
   CFG_MODE_TOGGLE,
   CFG_PAGE_NEXT,
   CFG_PAGE_PREV,
@@ -104,8 +102,7 @@ app.component(CFG_QUIZ_SELECT, (c) => guard(c, () => handleQuizSelect(c), true))
 app.component(CFG_PAGE_PREV, (c) => guard(c, () => handlePagePrev(c), true))
 app.component(CFG_PAGE_NEXT, (c) => guard(c, () => handlePageNext(c), true))
 app.component(CFG_MODE_TOGGLE, (c) => guard(c, () => handleModeToggle(c), true))
-app.component(CFG_COUNT_OPEN, (c) => guard(c, () => handleCountOpen(c), true))
-app.modal(CFG_COUNT_MODAL, (c) => guard(c, () => handleCountModal(c), true))
+app.component(CFG_COUNT_SELECT, (c) => guard(c, () => handleCountSelect(c), true))
 app.component(CFG_PLAY, (c) => guard(c, () => handlePlay(c), true))
 
 // セッション回答

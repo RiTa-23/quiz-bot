@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { questions } from '../db/schema'
 import { notFound } from '../errors'
@@ -43,6 +43,15 @@ export async function listDeletableQuizzes(db: Database, actor: Actor): Promise<
     .filter((q) => q.role === 'owner')
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((q) => ({ id: q.id, title: q.title }))
+}
+
+/** クイズの設問数を返す（出題数プルダウンの上限算出用）。 */
+export async function countQuizQuestions(db: Database, quizId: string): Promise<number> {
+  const rows = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(questions)
+    .where(eq(questions.quizId, quizId))
+  return rows[0]?.count ?? 0
 }
 
 function toQuestion(row: typeof questions.$inferSelect): Question {
