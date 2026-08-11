@@ -9,7 +9,8 @@ import {
   IN_BODY,
   IN_CHOICES,
   IN_EXPLANATION,
-  IN_TF_ANSWER,
+  TF_BATSU,
+  TF_MARU,
   buildAddQuestionPanel,
   buildQuestionModal,
 } from './messages'
@@ -25,7 +26,7 @@ function selectValue(c: ComponentContext<{ Bindings: Bindings }>): string {
   return (c.interaction.data as { values?: string[] }).values?.[0] ?? ''
 }
 
-/** パネルの AQ_OPEN ボタン custom_id から選択状態（quizId:type:page）を復元する。 */
+/** パネルの AQ_OPEN ボタン custom_id から選択状態（quizId:type:page:tf）を復元する。 */
 function readState(c: ComponentContext<{ Bindings: Bindings }>): AddQuestionState {
   const rows = (c.interaction.message?.components ?? []) as {
     components: { custom_id?: string }[]
@@ -33,12 +34,17 @@ function readState(c: ComponentContext<{ Bindings: Bindings }>): AddQuestionStat
   for (const row of rows) {
     for (const comp of row.components) {
       if (comp.custom_id?.startsWith(`${AQ_OPEN};`)) {
-        const [quizId, type, page] = comp.custom_id.slice(AQ_OPEN.length + 1).split(':')
-        return { quizId: quizId ?? '', type: type ?? '', page: Number(page ?? '0') || 0 }
+        const [quizId, type, page, tf] = comp.custom_id.slice(AQ_OPEN.length + 1).split(':')
+        return {
+          quizId: quizId ?? '',
+          type: type ?? '',
+          page: Number(page ?? '0') || 0,
+          tf: tf ?? '',
+        }
       }
     }
   }
-  return { quizId: '', type: '', page: 0 }
+  return { quizId: '', type: '', page: 0, tf: '' }
 }
 
 async function editableQuizzes(c: ComponentContext<{ Bindings: Bindings }>) {
@@ -57,8 +63,20 @@ export async function handleAddQuestionCommand(c: CommandContext<{ Bindings: Bin
       .ephemeral()
       .res('編集できるクイズがありません。まず `/quiz create` で作成してください。')
   }
-  const state: AddQuestionState = { quizId: quizzes[0]?.id ?? '', type: '', page: 0 }
+  const state: AddQuestionState = { quizId: quizzes[0]?.id ?? '', type: '', page: 0, tf: '' }
   return c.ephemeral().res(buildAddQuestionPanel(quizzes, state))
+}
+
+export async function handleAqTfMaru(c: ComponentContext<{ Bindings: Bindings }>) {
+  const state = readState(c)
+  state.tf = TF_MARU
+  return c.resUpdate(buildAddQuestionPanel(await editableQuizzes(c), state))
+}
+
+export async function handleAqTfBatsu(c: ComponentContext<{ Bindings: Bindings }>) {
+  const state = readState(c)
+  state.tf = TF_BATSU
+  return c.resUpdate(buildAddQuestionPanel(await editableQuizzes(c), state))
 }
 
 export async function handleAqQuizSelect(c: ComponentContext<{ Bindings: Bindings }>) {
@@ -90,11 +108,14 @@ export function handleAqOpen(c: ComponentContext<{ Bindings: Bindings }>) {
   if (!state.quizId || !state.type) {
     return c.ephemeral().res('クイズと出題形式を選択してください。')
   }
-  return c.resModal(buildQuestionModal(state.quizId, state.type as QuestionType))
+  if (state.type === 'true_false' && !state.tf) {
+    return c.ephemeral().res('正解（○ または ×）を選択してください。')
+  }
+  return c.resModal(buildQuestionModal(state.quizId, state.type as QuestionType, state.tf))
 }
 
 export async function handleAqModal(c: ModalContext<{ Bindings: Bindings }>) {
-  const [quizId, type] = (c.var.custom_id ?? '').split(':')
+  const [quizId, type, tf] = (c.var.custom_id ?? '').split(':')
   const v = c.var as Record<string, string | undefined>
   const qType = (type ?? 'free_text') as QuestionType
 
@@ -104,7 +125,7 @@ export async function handleAqModal(c: ModalContext<{ Bindings: Bindings }>) {
     choices = splitCsv(v[IN_CHOICES])
     answers = splitCsv(v[IN_ANSWERS])
   } else if (qType === 'true_false') {
-    answers = [(v[IN_TF_ANSWER] ?? '').trim()].filter(Boolean)
+    answers = [tf ?? ''].filter(Boolean)
   } else {
     answers = splitCsv(v[IN_ANSWERS])
   }

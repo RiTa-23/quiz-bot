@@ -6,6 +6,8 @@ import {
   handleAqPageNext,
   handleAqPagePrev,
   handleAqQuizSelect,
+  handleAqTfBatsu,
+  handleAqTfMaru,
   handleAqTypeSelect,
 } from './authoring/handlers'
 import {
@@ -14,6 +16,8 @@ import {
   AQ_PAGE_NEXT,
   AQ_PAGE_PREV,
   AQ_QUIZ_SELECT,
+  AQ_TF_BATSU,
+  AQ_TF_MARU,
   AQ_TYPE_SELECT,
 } from './authoring/messages'
 import { handleQuizCommand } from './commands/quiz'
@@ -98,6 +102,8 @@ app.component(AQ_QUIZ_SELECT, (c) => guard(c, () => handleAqQuizSelect(c), true)
 app.component(AQ_TYPE_SELECT, (c) => guard(c, () => handleAqTypeSelect(c), true))
 app.component(AQ_PAGE_PREV, (c) => guard(c, () => handleAqPagePrev(c), true))
 app.component(AQ_PAGE_NEXT, (c) => guard(c, () => handleAqPageNext(c), true))
+app.component(AQ_TF_MARU, (c) => guard(c, () => handleAqTfMaru(c), true))
+app.component(AQ_TF_BATSU, (c) => guard(c, () => handleAqTfBatsu(c), true))
 app.component(AQ_OPEN, (c) => guard(c, () => handleAqOpen(c), true))
 app.modal(AQ_MODAL, (c) => guard(c, () => handleAqModal(c), true))
 
