@@ -275,8 +275,9 @@ export class QuizSession extends DurableObject<Bindings> {
       if (correct) s.soloCorrect += 1
 
       if (s.quizId) {
-        const buf = (s.soloPending ??= [])
-        buf.push({
+        // デプロイを跨いだ既存セッションにはこのフィールドが無いため防御的に初期化する
+        if (!s.soloPending) s.soloPending = []
+        s.soloPending.push({
           sessionId: s.sessionId,
           quizId: s.quizId,
           guildId: s.guildId,
