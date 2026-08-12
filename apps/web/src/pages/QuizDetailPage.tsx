@@ -212,10 +212,14 @@ function QuestionRow({
   onEdit: () => void
   onDelete: () => void
 }) {
+  // 誤タップで設問が消えないよう、削除は2段階にする（回答記録も消えて戻せないため）
+  const [confirming, setConfirming] = useState(false)
+
   return (
     <Card>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      {/* 確認ボタンが出ると操作側が広がるため、狭い画面では行を折り返して本文を潰さない */}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0 flex-1 basis-48">
           <p className="mb-1 flex flex-wrap items-center gap-x-1 text-xs text-navy-200">
             <span>
               #{index + 1} ・ {TYPE_LABEL[question.type]} ・
@@ -234,13 +238,37 @@ function QuestionRow({
           )}
         </div>
         {canEdit && (
-          <div className="flex shrink-0 gap-1">
-            <Button variant="ghost" onClick={onEdit}>
-              編集
-            </Button>
-            <Button variant="ghost" className="text-wrong hover:bg-wrong/10" onClick={onDelete}>
-              削除
-            </Button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+            {confirming ? (
+              <>
+                <span className="mr-1 text-xs text-navy-300">削除しますか？</span>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    setConfirming(false)
+                    onDelete()
+                  }}
+                >
+                  削除する
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirming(false)}>
+                  やめる
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={onEdit}>
+                  編集
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-wrong hover:bg-wrong/10"
+                  onClick={() => setConfirming(true)}
+                >
+                  削除
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>
