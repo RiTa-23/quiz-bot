@@ -110,10 +110,11 @@ const CONTENT: Record<HelpTopic, { summary: string; sections: Section[] }> = {
 }
 
 /**
- * トピック切り替えボタン。選択中は押せなくして現在地を示す。
+ * トピック切り替えボタンと、管理画面へのリンク。
  * 公開/自分だけの別は custom_id に持たせ、切り替え後も案内文が食い違わないようにする。
+ * URLはフッターに書いてもリンクにならないため、Linkボタンとして出す。
  */
-function topicButtons(current: HelpTopic, shared: boolean): Components {
+function topicButtons(current: HelpTopic, shared: boolean, webUrl?: string): Components {
   const components = new Components()
   components.row(
     ...HELP_TOPICS.map((topic) =>
@@ -122,14 +123,14 @@ function topicButtons(current: HelpTopic, shared: boolean): Components {
         .disabled(topic === current),
     ),
   )
+  if (webUrl) components.row(new Button(webUrl, '🔗 管理画面をひらく', 'Link'))
   return components
 }
 
-function footerText(shared: boolean, webUrl?: string): string {
-  const scope = shared
+function footerText(shared: boolean): string {
+  return shared
     ? 'この案内はチャンネル全員に見えています'
     : 'この案内はあなたにだけ見えています（全員に見せるには /quiz help share:True）'
-  return webUrl ? `${scope}　|　Web: ${webUrl}` : scope
 }
 
 export function buildHelpPanel(
@@ -138,12 +139,16 @@ export function buildHelpPanel(
   shared = false,
 ): { embeds: Embed[]; components: Components } {
   const { summary, sections } = CONTENT[topic]
+  // 埋め込みの本文は [表示文字](URL) がリンクになる（フッターはならない）
+  const description = webUrl
+    ? `${summary}\nクイズの作成・編集は [Web管理画面](${webUrl}) からも行えます。`
+    : summary
   const embed = panelEmbed({
     title: `クイズBotの使い方 — ${TOPICS[topic].label}`,
-    description: summary,
+    description,
     color: topic === 'play' ? COLOR.gold : COLOR.navy,
     fields: sections,
-    footer: footerText(shared, webUrl),
+    footer: footerText(shared),
   })
-  return { embeds: [embed], components: topicButtons(topic, shared) }
+  return { embeds: [embed], components: topicButtons(topic, shared, webUrl) }
 }
