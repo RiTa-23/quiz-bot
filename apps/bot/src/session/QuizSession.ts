@@ -35,6 +35,8 @@ const PAGE_SIZE = 25
 const MAX_COUNT = 50
 const BUZZ_TIMEOUT_MS = 60 * 1000
 const LOBBY_TIMEOUT_MS = 10 * 60 * 1000
+const FLUSH_RETRY_MS = 30 * 1000
+const MAX_FLUSH_RETRIES = 5
 const TRUE_FALSE_CHOICES = ['○', '×']
 
 type SessionQuestion = {
@@ -71,6 +73,8 @@ type State = {
   buzzClosed: boolean
   buzzAnswered: string[]
   pending: BuzzAttemptRecord[]
+  // 書き込み失敗の連続回数。既存セッションには存在しないため optional。
+  flushRetries?: number
   // buzz totals
   buzzScores: Record<string, number>
   sessionId: string
@@ -471,7 +475,7 @@ export class QuizSession extends DurableObject<Bindings> {
 
   /**
    * ソロの回答をD1へ書き込む。ユーザーのInteraction応答パス上で呼ばれるため、
-   * 失敗してもプレイを止めない（バッファに残し次の回答時に再送する）。
+   * 失敗してもプレイを止めない（バッファに残し、次の回答かalarmで再送する）。
    */
   private async flushSoloPending(): Promise<void> {
     const s = this.state
@@ -479,17 +483,58 @@ export class QuizSession extends DurableObject<Bindings> {
     try {
       await recordSoloAttempts(createDb(this.env.DB), s.soloPending)
       s.soloPending = []
+      if (!this.hasPending()) s.flushRetries = 0
     } catch (error) {
       console.error('recordSoloAttempts failed', error)
+      await this.scheduleFlushRetry()
     }
   }
 
+  /**
+   * 早押しの回答をD1へ書き込む。ソロと同様、失敗しても進行を止めない。
+   * 勝者表示は済んでいるのに例外で操作全体が失敗すると、表示と記録の
+   * どちらも失うため（再送は決定的な主キーで冪等になっている）。
+   */
   private async flushPending(): Promise<void> {
     const s = this.state
     if (!s || s.pending.length === 0) return
-    const db = createDb(this.env.DB)
-    await recordBuzzAttempts(db, s.pending)
-    s.pending = []
+    try {
+      await recordBuzzAttempts(createDb(this.env.DB), s.pending)
+      s.pending = []
+      if (!this.hasPending()) s.flushRetries = 0
+    } catch (error) {
+      console.error('recordBuzzAttempts failed', error)
+      await this.scheduleFlushRetry()
+    }
+  }
+
+  private hasPending(): boolean {
+    const s = this.state
+    return !!s && (s.pending.length > 0 || (s.soloPending?.length ?? 0) > 0)
+  }
+
+  /**
+   * 未送信の回答を後で再送するためのalarmを入れる。
+   * 早押しの締め切りalarmが既にあるときは奪わない（そちらの先頭でも再送するため）。
+   * 恒久的に書けない内容（設問が消えたなど）でalarmが永久に回り続けないよう上限を設ける。
+   */
+  private async scheduleFlushRetry(): Promise<void> {
+    const s = this.state
+    if (!s) return
+    const attempts = (s.flushRetries ?? 0) + 1
+    s.flushRetries = attempts
+    if (attempts > MAX_FLUSH_RETRIES) {
+      console.error('giving up on flushing attempts', {
+        sessionId: s.sessionId,
+        buzz: s.pending.length,
+        solo: s.soloPending?.length ?? 0,
+      })
+      s.pending = []
+      s.soloPending = []
+      return
+    }
+    if ((await this.ctx.storage.getAlarm()) !== null) return
+    await this.ctx.storage.setAlarm(Date.now() + FLUSH_RETRY_MS)
   }
 
   /** 募集の期限切れ。セッションを畳んでチャンネルを解放する。 */
@@ -508,14 +553,26 @@ export class QuizSession extends DurableObject<Bindings> {
     await this.save()
   }
 
-  /** 早押しの制限時間切れ。正解者なしで締め切り、次の問題を投稿する。 */
+  /**
+   * 早押しの制限時間切れ。正解者なしで締め切り、次の問題を投稿する。
+   * 未送信の回答が残っている場合の再送も兼ねる（終了済みセッションでもここだけは走る）。
+   */
   async alarm(): Promise<void> {
     const s = this.state
     if (!s) return
-    if (s.status === 'lobby') return this.expireLobby()
-    if (s.status !== 'active' || s.mode !== 'buzz' || s.buzzClosed) return
-    s.buzzClosed = true
+
+    // 用途に関わらず、まず溜まっている回答を書き出す。最終問の失敗や
+    // セッション終了後の失敗は、これ以外に再送の機会が無い。
     await this.flushPending()
+    await this.flushSoloPending()
+    if (this.hasPending()) await this.save()
+
+    if (s.status === 'lobby') return this.expireLobby()
+    if (s.status !== 'active' || s.mode !== 'buzz' || s.buzzClosed) {
+      await this.save()
+      return
+    }
+    s.buzzClosed = true
     const next = this.buildNext()
 
     if (!s.messageId) {
