@@ -46,10 +46,17 @@ Question 1---N BuzzAttempt    （早押しモードの回答記録）
 | answers | TEXT (json) NOT NULL | 正解パターンの配列。`["東京","とうきょう","Tokyo"]` のように複数正解を許容 |
 | explanation | TEXT | 解説（任意） |
 | sort_order | INTEGER NOT NULL DEFAULT 0 | 表示順 |
+| created_by_user_id | TEXT | 設問を追加したユーザーID（Discord）。Editor が追加した設問の出所を追えるようにするため |
 | created_at | TEXT NOT NULL | |
 | updated_at | TEXT NOT NULL | |
 
 インデックス: `quiz_id`
+
+**created_by_user_id について**
+- クイズ全体の作成者は `quizzes.owner_user_id`。設問は Editor も追加できるため（要件定義.md 2.5 の権限マトリクス）、設問単位の作成者を別に持つ
+- 導入前に作られた設問には値が無いため、マイグレーション（`0004_questions_created_by.sql`）で**そのクイズの作成者（`quizzes.owner_user_id`）を埋める**
+- カラムはNULL許容だが、上記バックフィルとアプリ側の必ずセットする実装により実質的に非NULL。読み出し側はNULLのときクイズの作成者にフォールバックする
+- 表示名（ユーザー名）はDiscord APIで解決する。IDのみをDBに持ち、名前は保持しない（改名に追随するため）
 
 **自由記述の正解判定について**
 - `answers` に複数の正解文字列パターンを保持し、いずれかに一致すれば正解とする

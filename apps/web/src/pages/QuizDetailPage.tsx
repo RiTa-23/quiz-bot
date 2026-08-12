@@ -15,7 +15,7 @@ import {
 import { useGuild } from '../lib/GuildContext'
 import { api } from '../lib/api'
 import { useApi } from '../lib/hooks'
-import type { Question, QuestionInput, QuizDetail } from '../lib/types'
+import type { Author, Question, QuestionInput, QuizDetail } from '../lib/types'
 
 const TYPE_LABEL: Record<string, string> = {
   multiple_choice: '4択',
@@ -73,6 +73,9 @@ export function QuizDetailPage() {
           <div>
             <h1 className="text-xl font-semibold text-gray-900">{data.title}</h1>
             {data.description && <p className="mt-1 text-gray-500">{data.description}</p>}
+            <p className="mt-1 text-xs text-gray-400">
+              <AuthorLabel author={data.authors[data.ownerUserId]} authorId={data.ownerUserId} />
+            </p>
           </div>
           {data.visibility === 'public' && <Badge tone="indigo">公開</Badge>}
         </div>
@@ -116,6 +119,8 @@ export function QuizDetailPage() {
                 key={q.id}
                 index={i}
                 question={q}
+                author={data.authors[q.createdByUserId ?? data.ownerUserId]}
+                authorId={q.createdByUserId ?? data.ownerUserId}
                 canEdit={canEdit}
                 onEdit={() => setEditingId(q.id)}
                 onDelete={() => deleteQuestion(q.id)}
@@ -130,15 +135,32 @@ export function QuizDetailPage() {
   )
 }
 
+/** Discordで引けなかったユーザーはIDのままにする（退会済みなどで解決できないことがある） */
+function AuthorLabel({ author, authorId }: { author?: Author; authorId: string }) {
+  if (!author) return <span title={authorId}>作成者: 不明</span>
+  return (
+    <span className="inline-flex items-center gap-1 align-middle">
+      {author.avatarUrl && (
+        <img src={author.avatarUrl} alt="" className="h-4 w-4 rounded-full" loading="lazy" />
+      )}
+      作成者: {author.displayName}
+    </span>
+  )
+}
+
 function QuestionRow({
   index,
   question,
+  author,
+  authorId,
   canEdit,
   onEdit,
   onDelete,
 }: {
   index: number
   question: Question
+  author?: Author
+  authorId: string
   canEdit: boolean
   onEdit: () => void
   onDelete: () => void
@@ -147,8 +169,11 @@ function QuestionRow({
     <Card>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="mb-1 text-xs text-gray-400">
-            #{index + 1} ・ {TYPE_LABEL[question.type]}
+          <p className="mb-1 flex flex-wrap items-center gap-x-1 text-xs text-gray-400">
+            <span>
+              #{index + 1} ・ {TYPE_LABEL[question.type]} ・
+            </span>
+            <AuthorLabel author={author} authorId={authorId} />
           </p>
           <p className="text-gray-900">{question.body}</p>
           {question.choices && (

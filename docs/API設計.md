@@ -55,8 +55,12 @@
 ### `GET /api/quizzes/:id`
 クイズ詳細取得（設問一覧を含む）。
 
-- Response: `Quiz & { questions: Question[], role, isOwner }`
+- Response: `Quiz & { questions: Question[], role, isOwner, authors }`
 - `role` / `isOwner` は `GET /api/quizzes` と同じ意味（前者はそのサーバーでの権限、後者はサーバー非依存の作成者判定）。Web の管理画面が**設問の追加・編集・削除UIの表示可否**に使うため、詳細でも必ず返す
+- `questions[].created_by_user_id` は設問を追加したユーザーID。設問は Editor も追加できるためクイズ作成者とは限らない（[DB設計.md](./DB設計.md) 参照）
+- `authors` は `{ [userId]: { id, displayName, avatarUrl } }` の対応表。クイズ作成者と各設問の作成者ぶんを含む
+  - 表示名はDBに保持せず、APIがDiscordから解決してKVに1時間キャッシュする（改名に追随するため）
+  - 退会済みなどで解決できなかったIDは `authors` に含まれない。Web側はIDのまま/「不明」にフォールバックする
 - 注意: `questions[].answers`（正解）は Owner / Editor 以外には含めない（不正回答対策）
 - 閲覧できるのは「そのサーバーで使えるクイズ」または「自分が作成したクイズ」。`guild_id` を付けない呼び出しでも、**作成者なら自分のクイズを取得できる**（管理画面向け）
 

@@ -36,6 +36,9 @@ export const questions = sqliteTable(
     answers: text('answers', { mode: 'json' }).notNull().$type<string[]>(),
     explanation: text('explanation'),
     sortOrder: integer('sort_order').notNull().default(0),
+    // 設問はEditorも追加できるため、クイズ作成者(quizzes.owner_user_id)とは別に持つ。
+    // 導入前の行はマイグレーションでクイズ作成者を埋めているため実質的に非NULL。
+    createdByUserId: text('created_by_user_id'),
     createdAt: text('created_at').notNull().default(nowIso()),
     updatedAt: text('updated_at').notNull().default(nowIso()),
   },

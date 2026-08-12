@@ -56,6 +56,7 @@ export async function addQuestion(
     answers: input.answers,
     explanation: input.explanation ?? null,
     sortOrder: input.sortOrder ?? 0,
+    createdByUserId: actor.userId,
     createdAt: now,
     updatedAt: now,
   })
@@ -69,6 +70,7 @@ export async function addQuestion(
     answers: input.answers,
     explanation: input.explanation ?? null,
     sortOrder: input.sortOrder ?? 0,
+    createdByUserId: actor.userId,
     createdAt: now,
     updatedAt: now,
   }
@@ -124,6 +126,7 @@ export async function updateQuestion(
     answers: patch.answers ?? existing.answers,
     explanation: input.explanation !== undefined ? input.explanation : existing.explanation,
     sortOrder: patch.sortOrder ?? existing.sortOrder,
+    createdByUserId: existing.createdByUserId,
     createdAt: existing.createdAt,
     updatedAt,
   }

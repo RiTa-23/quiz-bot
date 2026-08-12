@@ -27,6 +27,8 @@ export type Question = {
   answers: string[]
   explanation: string | null
   sortOrder: number
+  /** 設問を追加したユーザーID。導入前の設問はクイズ作成者で埋めてある */
+  createdByUserId: string | null
   createdAt: string
   updatedAt: string
 }

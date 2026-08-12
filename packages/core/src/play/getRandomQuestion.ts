@@ -16,6 +16,7 @@ function toQuestion(row: typeof questions.$inferSelect): Question {
     answers: row.answers,
     explanation: row.explanation,
     sortOrder: row.sortOrder,
+    createdByUserId: row.createdByUserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }

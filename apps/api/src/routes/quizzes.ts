@@ -22,6 +22,7 @@ import {
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { actorForGuild, actorFromQuery } from '../actor'
+import { fetchUserSummaries } from '../discordUsers'
 import type { Bindings, Variables } from '../env'
 import { handleApiError } from '../errorHandler'
 import { requireAuth } from '../middleware/requireAuth'
@@ -95,7 +96,12 @@ quizzesRoutes.get('/:id', async (c) => {
   try {
     const db = createDb(c.env.DB)
     const quiz = await getQuiz(db, actorFromQuery(c), c.req.param('id'))
-    return c.json(quiz)
+    // 表示名はDBに持たないため、クイズ作成者と各設問の作成者をここで解決して同梱する
+    const authors = await fetchUserSummaries(c.env, [
+      quiz.ownerUserId,
+      ...quiz.questions.map((q) => q.createdByUserId ?? quiz.ownerUserId),
+    ])
+    return c.json({ ...quiz, authors })
   } catch (error) {
     return handleApiError(c, error)
   }

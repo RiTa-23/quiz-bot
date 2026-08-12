@@ -31,9 +31,21 @@ export type Question = {
   answers?: string[]
   explanation: string | null
   sortOrder: number
+  /** 設問を追加したユーザーID。未設定の設問はクイズ作成者として扱う */
+  createdByUserId: string | null
 }
 
-export type QuizDetail = Quiz & { questions: Question[] }
+export type Author = {
+  id: string
+  displayName: string
+  avatarUrl: string | null
+}
+
+export type QuizDetail = Quiz & {
+  questions: Question[]
+  /** 作成者IDから表示名への対応。Discordで引けなかったユーザーは含まれない */
+  authors: Record<string, Author>
+}
 
 export type QuestionInput = {
   type: QuestionType
