@@ -26,6 +26,17 @@ export type DraftView = {
   mode: Mode
 }
 
+/** 早押しの参加者募集パネルの表示モデル。 */
+export type LobbyView = {
+  hostUserId: string
+  quizTitle: string | null
+  quizDescription: string | null
+  count: number
+  participants: string[]
+  /** ホストを含めて2人以上そろい、開始できる状態か */
+  canStart: boolean
+}
+
 export type SummaryData =
   | { mode: 'solo'; correct: number; total: number }
   | { mode: 'buzz'; total: number; scores: { userId: string; score: number }[] }
@@ -37,7 +48,10 @@ export type NextStep =
 
 /** DO.answer の結果。 */
 export type AnswerOutcome =
-  | { kind: 'ignored'; reason: 'not-active' | 'stale' | 'not-host' | 'closed' | 'already' }
+  | {
+      kind: 'ignored'
+      reason: 'not-active' | 'stale' | 'not-host' | 'not-participant' | 'closed' | 'already'
+    }
   | {
       kind: 'solo-result'
       correct: boolean
@@ -54,10 +68,33 @@ export type AnswerOutcome =
       next: NextStep
     }
 
+/** 設定GUIの操作結果。操作できるのはホスト（/quiz play の実行者）だけ。 */
+export type ControlResult =
+  | { ok: true; view: DraftView }
+  | { ok: false; reason: 'not-host' | 'no-session' }
+
+/** /quiz play の結果。進行中セッションを他人が上書きするのを防ぐ。 */
+export type OpenDraftResult =
+  | { ok: true; view: DraftView }
+  | { ok: false; reason: 'active-session'; hostUserId: string }
+
 /** DO.start の結果。 */
 export type StartResult =
   | { ok: true; first: PublicSessionQuestion; number: number; total: number; mode: Mode }
-  | { ok: false; reason: 'no-quiz' | 'no-questions' }
+  | {
+      ok: false
+      reason: 'no-quiz' | 'no-questions' | 'not-host' | 'no-session' | 'not-enough-players'
+    }
+
+/** 設定パネルのPlay押下結果。早押しは募集パネルへ、1人はそのまま開始する。 */
+export type PlayResult =
+  | { kind: 'lobby'; result: LobbyResult }
+  | { kind: 'start'; result: StartResult }
+
+/** 募集パネルの操作結果。 */
+export type LobbyResult =
+  | { ok: true; view: LobbyView }
+  | { ok: false; reason: 'not-host' | 'no-session' | 'no-quiz' | 'host-cannot-join' | 'already' }
 
 /** 回答入力（4択/○×はインデックス、自由記述はテキスト）。 */
 export type AnswerInput = { kind: 'choice'; idx: number } | { kind: 'text'; text: string }

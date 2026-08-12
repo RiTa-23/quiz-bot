@@ -7,10 +7,18 @@ import {
   FT_INPUT,
   buildConfigPanel,
   buildFreetextModal,
+  buildLobbyPanel,
   buildSessionQuestion,
   buildSummary,
 } from './messages'
-import type { AnswerInput, AnswerOutcome, NextStep } from './types'
+import type {
+  AnswerInput,
+  AnswerOutcome,
+  ControlResult,
+  LobbyResult,
+  NextStep,
+  StartResult,
+} from './types'
 
 type Ctx =
   | CommandContext<{ Bindings: Bindings }>
@@ -30,19 +38,31 @@ const IGNORED_MESSAGE: Record<string, string> = {
   'not-active': 'この回答は受け付けられません。',
   stale: 'この問題はすでに次へ進みました。',
   'not-host': 'これはホストのプレイです。',
+  'not-participant': 'このゲームに参加していません。',
   closed: 'この問題はすでに締め切られました。',
   already: 'すでに回答済みです。',
 }
 
-/** /quiz play: 出題設定GUIを開く。 */
+const DENIED_MESSAGE: Record<'not-host' | 'no-session', string> = {
+  'not-host':
+    'この設定パネルを操作できるのはホストだけです。自分で始めるには /quiz play を実行してください。',
+  'no-session': 'この設定パネルは無効です。もう一度 /quiz play を実行してください。',
+}
+
 export async function handleQuizPlay(c: CommandContext<{ Bindings: Bindings }>) {
   const actor = actorFromInteraction(c.interaction)
   if (!actor.guildId) return c.ephemeral().res('この操作はサーバー内で実行してください。')
   const channelId = channelIdOf(c.interaction)
   const stub = stubOf(c, actor.guildId, channelId)
-  const view = await stub.openDraft(actor, channelId)
-  const panel = buildConfigPanel(view)
-  return c.res(panel)
+  const result = await stub.openDraft(actor, channelId)
+  if (!result.ok) {
+    return c
+      .ephemeral()
+      .res(
+        `このチャンネルでは <@${result.hostUserId}> のクイズが進行中です。終わるまで待つか、別のチャンネルで実行してください。`,
+      )
+  }
+  return c.res(buildConfigPanel(result.view))
 }
 
 function stubFromComponent(
@@ -53,42 +73,59 @@ function stubFromComponent(
   return { actor, channelId, stub: stubOf(c, actor.guildId ?? '', channelId) }
 }
 
+/** ホスト以外の操作は元のパネルを変えず、本人にだけ理由を返す。 */
+function respondControl(c: ComponentContext<{ Bindings: Bindings }>, result: ControlResult) {
+  if (!result.ok) return c.ephemeral().res(DENIED_MESSAGE[result.reason])
+  return c.resUpdate(buildConfigPanel(result.view))
+}
+
 export async function handleQuizSelect(c: ComponentContext<{ Bindings: Bindings }>) {
   const value = (c.interaction.data as { values?: string[] }).values?.[0] ?? ''
-  const { stub } = stubFromComponent(c)
-  const view = await stub.selectQuiz(value)
-  return c.resUpdate(buildConfigPanel(view))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.selectQuiz(actor.userId, value))
 }
 
 export async function handlePagePrev(c: ComponentContext<{ Bindings: Bindings }>) {
-  const { stub } = stubFromComponent(c)
-  return c.resUpdate(buildConfigPanel(await stub.changePage(-1)))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.changePage(actor.userId, -1))
 }
 
 export async function handlePageNext(c: ComponentContext<{ Bindings: Bindings }>) {
-  const { stub } = stubFromComponent(c)
-  return c.resUpdate(buildConfigPanel(await stub.changePage(1)))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.changePage(actor.userId, 1))
 }
 
 export async function handleModeToggle(c: ComponentContext<{ Bindings: Bindings }>) {
-  const { stub } = stubFromComponent(c)
-  return c.resUpdate(buildConfigPanel(await stub.toggleMode()))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.toggleMode(actor.userId))
 }
 
 export async function handleCountSelect(c: ComponentContext<{ Bindings: Bindings }>) {
   const value = (c.interaction.data as { values?: string[] }).values?.[0] ?? '1'
-  const { stub } = stubFromComponent(c)
-  const view = await stub.setCount(Number.parseInt(value, 10))
-  return c.resUpdate(buildConfigPanel(view))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.setCount(actor.userId, Number.parseInt(value, 10)))
 }
 
-export async function handlePlay(c: ComponentContext<{ Bindings: Bindings }>) {
-  const { stub } = stubFromComponent(c)
-  const messageId = c.interaction.message.id
-  const result = await stub.start(messageId)
+type StartFailReason = Extract<StartResult, { ok: false }>['reason']
+type LobbyFailReason = Extract<LobbyResult, { ok: false }>['reason']
+
+const START_FAIL_MESSAGE: Record<Exclude<StartFailReason, 'not-host' | 'no-session'>, string> = {
+  'no-quiz': 'クイズを選択してください。',
+  'no-questions': '設問がありません。',
+  'not-enough-players': 'ホストを含めて2人以上必要です。',
+}
+
+/** 開始成功時に設問メッセージへ差し替える。失敗時は本人にだけ理由を返す。 */
+function respondStart(
+  c: ComponentContext<{ Bindings: Bindings }>,
+  result: StartResult,
+  messageId: string,
+) {
   if (!result.ok) {
-    const msg = result.reason === 'no-quiz' ? 'クイズを選択してください。' : '設問がありません。'
-    return c.ephemeral().res(msg)
+    if (result.reason === 'not-host' || result.reason === 'no-session') {
+      return c.ephemeral().res(DENIED_MESSAGE[result.reason])
+    }
+    return c.ephemeral().res(START_FAIL_MESSAGE[result.reason])
   }
   const step: Extract<NextStep, { done: false }> = {
     done: false,
@@ -97,6 +134,44 @@ export async function handlePlay(c: ComponentContext<{ Bindings: Bindings }>) {
     total: result.total,
   }
   return c.resUpdate(buildSessionQuestion(step, messageId))
+}
+
+const LOBBY_DENIED_MESSAGE: Record<LobbyFailReason, string> = {
+  'not-host': DENIED_MESSAGE['not-host'],
+  'no-session': DENIED_MESSAGE['no-session'],
+  'no-quiz': 'クイズを選択してください。',
+  'host-cannot-join': 'ホストはすでに参加しています。',
+  already: 'すでに参加しています。',
+}
+
+function respondLobby(c: ComponentContext<{ Bindings: Bindings }>, result: LobbyResult) {
+  if (!result.ok) return c.ephemeral().res(LOBBY_DENIED_MESSAGE[result.reason])
+  return c.resUpdate({
+    ...buildLobbyPanel(result.view),
+    // 参加者一覧に <@id> が並ぶため、通知が飛ばないようにする
+    allowed_mentions: { parse: [] },
+  })
+}
+
+export async function handlePlay(c: ComponentContext<{ Bindings: Bindings }>) {
+  const { actor, stub } = stubFromComponent(c)
+  const messageId = c.interaction.message.id
+  const outcome = await stub.play(actor.userId, messageId)
+  if (outcome.kind === 'lobby') return respondLobby(c, outcome.result)
+  return respondStart(c, outcome.result, messageId)
+}
+
+/** 募集パネル: 参加ボタン。ホストが押しても参加者一覧は変わらない。 */
+export async function handleLobbyJoin(c: ComponentContext<{ Bindings: Bindings }>) {
+  const { actor, stub } = stubFromComponent(c)
+  return respondLobby(c, await stub.join(actor.userId))
+}
+
+/** 募集パネル: ホストのPlay。2人未満なら開始しない。 */
+export async function handleLobbyStart(c: ComponentContext<{ Bindings: Bindings }>) {
+  const { actor, stub } = stubFromComponent(c)
+  const messageId = c.interaction.message.id
+  return respondStart(c, await stub.start(actor.userId, messageId), messageId)
 }
 
 function advanceHeader(

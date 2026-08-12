@@ -19,16 +19,22 @@ import { buildSessionQuestion, buildSummary } from './messages'
 import type {
   AnswerInput,
   AnswerOutcome,
+  ControlResult,
   DraftView,
+  LobbyResult,
+  LobbyView,
   Mode,
   NextStep,
+  OpenDraftResult,
+  PlayResult,
   PublicSessionQuestion,
   StartResult,
 } from './types'
 
 const PAGE_SIZE = 25
 const MAX_COUNT = 50
-const BUZZ_TIMEOUT_MS = 10 * 60 * 1000
+const BUZZ_TIMEOUT_MS = 60 * 1000
+const LOBBY_TIMEOUT_MS = 10 * 60 * 1000
 const TRUE_FALSE_CHOICES = ['○', '×']
 
 type SessionQuestion = {
@@ -41,7 +47,7 @@ type SessionQuestion = {
 }
 
 type State = {
-  status: 'draft' | 'active' | 'finished'
+  status: 'draft' | 'lobby' | 'active' | 'finished'
   guildId: string
   channelId: string
   hostUserId: string
@@ -51,6 +57,8 @@ type State = {
   page: number
   count: number
   mode: Mode
+  // lobby（早押しの参加者。ホストを含む。デプロイを跨いだ既存セッションには存在しない）
+  participants?: string[]
   // active
   questions: SessionQuestion[]
   index: number
@@ -142,8 +150,20 @@ export class QuizSession extends DurableObject<Bindings> {
     }
   }
 
-  /** /quiz play 実行時: ドラフトを初期化して設定GUIの表示モデルを返す。 */
-  async openDraft(actor: Actor, channelId: string): Promise<DraftView> {
+  /**
+   * /quiz play 実行時: ドラフトを初期化して設定GUIの表示モデルを返す。
+   * 進行中のセッションは他人からは上書きさせない（設問・スコアが失われるため）。
+   * ホスト本人には許可する。詰まったセッションを畳む唯一の手段になるため。
+   */
+  async openDraft(actor: Actor, channelId: string): Promise<OpenDraftResult> {
+    const prev = this.state
+    if (prev && (prev.status === 'active' || prev.status === 'lobby')) {
+      if (prev.hostUserId !== actor.userId) {
+        return { ok: false, reason: 'active-session', hostUserId: prev.hostUserId }
+      }
+      await this.discardActive()
+    }
+
     const db = createDb(this.env.DB)
     const all = await listPlayableQuizzes(db, actor)
     this.state = {
@@ -156,6 +176,7 @@ export class QuizSession extends DurableObject<Bindings> {
       page: 0,
       count: 1,
       mode: 'solo',
+      participants: [],
       questions: [],
       index: 0,
       soloCorrect: 0,
@@ -167,40 +188,133 @@ export class QuizSession extends DurableObject<Bindings> {
       sessionId: crypto.randomUUID(),
     }
     await this.save()
-    return this.view()
+    return { ok: true, view: await this.view() }
   }
 
-  async selectQuiz(quizId: string): Promise<DraftView> {
-    if (this.state) this.state.quizId = quizId
-    await this.save()
-    return this.view()
-  }
-
-  async changePage(delta: number): Promise<DraftView> {
-    if (this.state) this.state.page = Math.max(0, this.state.page + delta)
-    await this.save()
-    return this.view()
-  }
-
-  async toggleMode(): Promise<DraftView> {
-    if (this.state) this.state.mode = this.state.mode === 'solo' ? 'buzz' : 'solo'
-    await this.save()
-    return this.view()
-  }
-
-  async setCount(n: number): Promise<DraftView> {
-    if (this.state) {
-      const clamped = Math.max(1, Math.min(MAX_COUNT, Number.isFinite(n) ? Math.floor(n) : 1))
-      this.state.count = clamped
+  /** 進行中セッションを畳む。記録済みの回答を捨てないよう先に書き出し、アラームも解除する。 */
+  private async discardActive(): Promise<void> {
+    try {
+      await this.flushPending()
+    } catch (error) {
+      console.error('flushPending failed on discard', error)
     }
+    await this.flushSoloPending()
+    await this.ctx.storage.deleteAlarm()
+  }
+
+  /**
+   * 設定GUIを操作できるのはホストだけ。
+   * 併せて想定外の状態からの操作も弾く。開始済みのセッションに対して
+   * 古いパネルの連打やダブルクリックが届くと、設問とスコアが作り直されるため。
+   */
+  private guardHost(
+    userId: string,
+    allowed: State['status'][] = ['draft'],
+  ): { ok: false; reason: 'not-host' | 'no-session' } | null {
+    const s = this.state
+    if (!s) return { ok: false, reason: 'no-session' }
+    if (s.hostUserId !== userId) return { ok: false, reason: 'not-host' }
+    if (!allowed.includes(s.status)) return { ok: false, reason: 'no-session' }
+    return null
+  }
+
+  async selectQuiz(userId: string, quizId: string): Promise<ControlResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    ;(this.state as State).quizId = quizId
     await this.save()
-    return this.view()
+    return { ok: true, view: await this.view() }
+  }
+
+  async changePage(userId: string, delta: number): Promise<ControlResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    const s = this.state as State
+    s.page = Math.max(0, s.page + delta)
+    await this.save()
+    return { ok: true, view: await this.view() }
+  }
+
+  async toggleMode(userId: string): Promise<ControlResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    const s = this.state as State
+    s.mode = s.mode === 'solo' ? 'buzz' : 'solo'
+    await this.save()
+    return { ok: true, view: await this.view() }
+  }
+
+  async setCount(userId: string, n: number): Promise<ControlResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    const s = this.state as State
+    s.count = Math.max(1, Math.min(MAX_COUNT, Number.isFinite(n) ? Math.floor(n) : 1))
+    await this.save()
+    return { ok: true, view: await this.view() }
+  }
+
+  /** 設定パネルのPlay押下。早押しは参加者募集へ、1人はそのまま開始する。 */
+  async play(userId: string, messageId: string): Promise<PlayResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return { kind: 'start', result: denied }
+    if ((this.state as State).mode === 'buzz') {
+      return { kind: 'lobby', result: await this.openLobby(userId, messageId) }
+    }
+    return { kind: 'start', result: await this.start(userId, messageId) }
+  }
+
+  private async lobbyView(): Promise<LobbyView> {
+    const s = this.state as State
+    const draft = await this.view()
+    const participants = s.participants ?? []
+    return {
+      hostUserId: s.hostUserId,
+      quizTitle: draft.selectedQuizTitle,
+      quizDescription: draft.selectedQuizDescription,
+      count: draft.count,
+      participants,
+      canStart: participants.length >= 2,
+    }
+  }
+
+  /** 早押しの募集開始（ホストのみ）。ホストは自動で参加者に入る。 */
+  async openLobby(userId: string, messageId: string): Promise<LobbyResult> {
+    const denied = this.guardHost(userId, ['draft'])
+    if (denied) return denied
+    const s = this.state as State
+    if (!s.quizId) return { ok: false, reason: 'no-quiz' }
+    s.status = 'lobby'
+    s.messageId = messageId
+    s.participants = [s.hostUserId]
+    await this.save()
+    // 放置された募集がチャンネルを占有し続けないよう期限を切る
+    await this.ctx.storage.setAlarm(Date.now() + LOBBY_TIMEOUT_MS)
+    return { ok: true, view: await this.lobbyView() }
+  }
+
+  /** 募集への参加。ホストは既に参加者なので押しても何も起きない。 */
+  async join(userId: string): Promise<LobbyResult> {
+    const s = this.state
+    if (!s || s.status !== 'lobby') return { ok: false, reason: 'no-session' }
+    if (userId === s.hostUserId) return { ok: false, reason: 'host-cannot-join' }
+    if (!s.participants) s.participants = [s.hostUserId]
+    if (s.participants.includes(userId)) return { ok: false, reason: 'already' }
+    s.participants.push(userId)
+    await this.save()
+    return { ok: true, view: await this.lobbyView() }
   }
 
   /** Play押下時: 設問を確定してセッションを開始する。 */
-  async start(messageId: string): Promise<StartResult> {
-    const s = this.state
-    if (!s || !s.quizId) return { ok: false, reason: 'no-quiz' }
+  async start(userId: string, messageId: string): Promise<StartResult> {
+    const denied = this.guardHost(userId, ['draft', 'lobby'])
+    if (denied) return denied
+    const s = this.state as State
+    if (!s.quizId) return { ok: false, reason: 'no-quiz' }
+    // 早押しは募集を経由した場合のみ開始できる（1人モードはドラフトから直接）
+    if (s.mode === 'buzz' && s.status !== 'lobby') return { ok: false, reason: 'no-session' }
+    if (s.mode === 'buzz' && (s.participants?.length ?? 0) < 2) {
+      return { ok: false, reason: 'not-enough-players' }
+    }
 
     const db = createDb(this.env.DB)
     // getSessionQuestions は設問0件のとき notFound を投げるので、それだけを
@@ -222,6 +336,7 @@ export class QuizSession extends DurableObject<Bindings> {
     s.messageId = messageId
     s.soloCorrect = 0
     s.soloPending = []
+    if (s.mode === 'solo') s.participants = [s.hostUserId]
     s.buzzScores = {}
     this.resetQuestionState()
     await this.save()
@@ -312,6 +427,10 @@ export class QuizSession extends DurableObject<Bindings> {
     }
 
     // buzz
+    // participants 未設定の既存セッション（旧フローで開始済み）は全員参加扱いにする
+    if (s.participants && !s.participants.includes(userId)) {
+      return { kind: 'ignored', reason: 'not-participant' }
+    }
     if (s.buzzClosed) return { kind: 'ignored', reason: 'closed' }
     if (s.buzzAnswered.includes(userId)) return { kind: 'ignored', reason: 'already' }
     s.buzzAnswered.push(userId)
@@ -373,10 +492,28 @@ export class QuizSession extends DurableObject<Bindings> {
     s.pending = []
   }
 
+  /** 募集の期限切れ。セッションを畳んでチャンネルを解放する。 */
+  private async expireLobby(): Promise<void> {
+    const s = this.state as State
+    // 先にパネルを畳んでから finished にする。編集が失敗したら例外のまま alarm の
+    // リトライに委ね、参加ボタンが残ったまま募集だけ終了した状態を避ける。
+    if (s.messageId) {
+      await editChannelMessage(this.env.DISCORD_TOKEN, s.channelId, s.messageId, {
+        content:
+          '⏰ 参加者が集まらなかったため募集を終了しました。もう一度 `/quiz play` から始めてください。',
+        components: [],
+      })
+    }
+    s.status = 'finished'
+    await this.save()
+  }
+
   /** 早押しの制限時間切れ。正解者なしで締め切り、次の問題を投稿する。 */
   async alarm(): Promise<void> {
     const s = this.state
-    if (!s || s.status !== 'active' || s.mode !== 'buzz' || s.buzzClosed) return
+    if (!s) return
+    if (s.status === 'lobby') return this.expireLobby()
+    if (s.status !== 'active' || s.mode !== 'buzz' || s.buzzClosed) return
     s.buzzClosed = true
     await this.flushPending()
     const next = this.buildNext()
