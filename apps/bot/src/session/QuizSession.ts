@@ -19,9 +19,11 @@ import { buildSessionQuestion, buildSummary } from './messages'
 import type {
   AnswerInput,
   AnswerOutcome,
+  ControlResult,
   DraftView,
   Mode,
   NextStep,
+  OpenDraftResult,
   PublicSessionQuestion,
   StartResult,
 } from './types'
@@ -142,8 +144,20 @@ export class QuizSession extends DurableObject<Bindings> {
     }
   }
 
-  /** /quiz play 実行時: ドラフトを初期化して設定GUIの表示モデルを返す。 */
-  async openDraft(actor: Actor, channelId: string): Promise<DraftView> {
+  /**
+   * /quiz play 実行時: ドラフトを初期化して設定GUIの表示モデルを返す。
+   * 進行中のセッションは他人からは上書きさせない（設問・スコアが失われるため）。
+   * ホスト本人には許可する。詰まったセッションを畳む唯一の手段になるため。
+   */
+  async openDraft(actor: Actor, channelId: string): Promise<OpenDraftResult> {
+    const prev = this.state
+    if (prev && prev.status === 'active') {
+      if (prev.hostUserId !== actor.userId) {
+        return { ok: false, reason: 'active-session', hostUserId: prev.hostUserId }
+      }
+      await this.discardActive()
+    }
+
     const db = createDb(this.env.DB)
     const all = await listPlayableQuizzes(db, actor)
     this.state = {
@@ -167,40 +181,69 @@ export class QuizSession extends DurableObject<Bindings> {
       sessionId: crypto.randomUUID(),
     }
     await this.save()
-    return this.view()
+    return { ok: true, view: await this.view() }
   }
 
-  async selectQuiz(quizId: string): Promise<DraftView> {
-    if (this.state) this.state.quizId = quizId
-    await this.save()
-    return this.view()
-  }
-
-  async changePage(delta: number): Promise<DraftView> {
-    if (this.state) this.state.page = Math.max(0, this.state.page + delta)
-    await this.save()
-    return this.view()
-  }
-
-  async toggleMode(): Promise<DraftView> {
-    if (this.state) this.state.mode = this.state.mode === 'solo' ? 'buzz' : 'solo'
-    await this.save()
-    return this.view()
-  }
-
-  async setCount(n: number): Promise<DraftView> {
-    if (this.state) {
-      const clamped = Math.max(1, Math.min(MAX_COUNT, Number.isFinite(n) ? Math.floor(n) : 1))
-      this.state.count = clamped
+  /** 進行中セッションを畳む。記録済みの回答を捨てないよう先に書き出し、アラームも解除する。 */
+  private async discardActive(): Promise<void> {
+    try {
+      await this.flushPending()
+    } catch (error) {
+      console.error('flushPending failed on discard', error)
     }
+    await this.flushSoloPending()
+    await this.ctx.storage.deleteAlarm()
+  }
+
+  /** 設定GUIを操作できるのはホストだけ。 */
+  private guardHost(userId: string): { ok: false; reason: 'not-host' | 'no-session' } | null {
+    const s = this.state
+    if (!s) return { ok: false, reason: 'no-session' }
+    if (s.hostUserId !== userId) return { ok: false, reason: 'not-host' }
+    return null
+  }
+
+  async selectQuiz(userId: string, quizId: string): Promise<ControlResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    ;(this.state as State).quizId = quizId
     await this.save()
-    return this.view()
+    return { ok: true, view: await this.view() }
+  }
+
+  async changePage(userId: string, delta: number): Promise<ControlResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    const s = this.state as State
+    s.page = Math.max(0, s.page + delta)
+    await this.save()
+    return { ok: true, view: await this.view() }
+  }
+
+  async toggleMode(userId: string): Promise<ControlResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    const s = this.state as State
+    s.mode = s.mode === 'solo' ? 'buzz' : 'solo'
+    await this.save()
+    return { ok: true, view: await this.view() }
+  }
+
+  async setCount(userId: string, n: number): Promise<ControlResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    const s = this.state as State
+    s.count = Math.max(1, Math.min(MAX_COUNT, Number.isFinite(n) ? Math.floor(n) : 1))
+    await this.save()
+    return { ok: true, view: await this.view() }
   }
 
   /** Play押下時: 設問を確定してセッションを開始する。 */
-  async start(messageId: string): Promise<StartResult> {
-    const s = this.state
-    if (!s || !s.quizId) return { ok: false, reason: 'no-quiz' }
+  async start(userId: string, messageId: string): Promise<StartResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    const s = this.state as State
+    if (!s.quizId) return { ok: false, reason: 'no-quiz' }
 
     const db = createDb(this.env.DB)
     // getSessionQuestions は設問0件のとき notFound を投げるので、それだけを

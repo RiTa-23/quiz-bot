@@ -10,7 +10,7 @@ import {
   buildSessionQuestion,
   buildSummary,
 } from './messages'
-import type { AnswerInput, AnswerOutcome, NextStep } from './types'
+import type { AnswerInput, AnswerOutcome, ControlResult, NextStep } from './types'
 
 type Ctx =
   | CommandContext<{ Bindings: Bindings }>
@@ -34,15 +34,25 @@ const IGNORED_MESSAGE: Record<string, string> = {
   already: 'すでに回答済みです。',
 }
 
-/** /quiz play: 出題設定GUIを開く。 */
+const DENIED_MESSAGE: Record<'not-host' | 'no-session', string> = {
+  'not-host': 'この設定パネルを操作できるのはホストだけです。自分で始めるには /quiz play を実行してください。',
+  'no-session': 'この設定パネルは無効です。もう一度 /quiz play を実行してください。',
+}
+
 export async function handleQuizPlay(c: CommandContext<{ Bindings: Bindings }>) {
   const actor = actorFromInteraction(c.interaction)
   if (!actor.guildId) return c.ephemeral().res('この操作はサーバー内で実行してください。')
   const channelId = channelIdOf(c.interaction)
   const stub = stubOf(c, actor.guildId, channelId)
-  const view = await stub.openDraft(actor, channelId)
-  const panel = buildConfigPanel(view)
-  return c.res(panel)
+  const result = await stub.openDraft(actor, channelId)
+  if (!result.ok) {
+    return c
+      .ephemeral()
+      .res(
+        `このチャンネルでは <@${result.hostUserId}> のクイズが進行中です。終わるまで待つか、別のチャンネルで実行してください。`,
+      )
+  }
+  return c.res(buildConfigPanel(result.view))
 }
 
 function stubFromComponent(
@@ -53,40 +63,47 @@ function stubFromComponent(
   return { actor, channelId, stub: stubOf(c, actor.guildId ?? '', channelId) }
 }
 
+/** ホスト以外の操作は元のパネルを変えず、本人にだけ理由を返す。 */
+function respondControl(c: ComponentContext<{ Bindings: Bindings }>, result: ControlResult) {
+  if (!result.ok) return c.ephemeral().res(DENIED_MESSAGE[result.reason])
+  return c.resUpdate(buildConfigPanel(result.view))
+}
+
 export async function handleQuizSelect(c: ComponentContext<{ Bindings: Bindings }>) {
   const value = (c.interaction.data as { values?: string[] }).values?.[0] ?? ''
-  const { stub } = stubFromComponent(c)
-  const view = await stub.selectQuiz(value)
-  return c.resUpdate(buildConfigPanel(view))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.selectQuiz(actor.userId, value))
 }
 
 export async function handlePagePrev(c: ComponentContext<{ Bindings: Bindings }>) {
-  const { stub } = stubFromComponent(c)
-  return c.resUpdate(buildConfigPanel(await stub.changePage(-1)))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.changePage(actor.userId, -1))
 }
 
 export async function handlePageNext(c: ComponentContext<{ Bindings: Bindings }>) {
-  const { stub } = stubFromComponent(c)
-  return c.resUpdate(buildConfigPanel(await stub.changePage(1)))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.changePage(actor.userId, 1))
 }
 
 export async function handleModeToggle(c: ComponentContext<{ Bindings: Bindings }>) {
-  const { stub } = stubFromComponent(c)
-  return c.resUpdate(buildConfigPanel(await stub.toggleMode()))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.toggleMode(actor.userId))
 }
 
 export async function handleCountSelect(c: ComponentContext<{ Bindings: Bindings }>) {
   const value = (c.interaction.data as { values?: string[] }).values?.[0] ?? '1'
-  const { stub } = stubFromComponent(c)
-  const view = await stub.setCount(Number.parseInt(value, 10))
-  return c.resUpdate(buildConfigPanel(view))
+  const { actor, stub } = stubFromComponent(c)
+  return respondControl(c, await stub.setCount(actor.userId, Number.parseInt(value, 10)))
 }
 
 export async function handlePlay(c: ComponentContext<{ Bindings: Bindings }>) {
-  const { stub } = stubFromComponent(c)
+  const { actor, stub } = stubFromComponent(c)
   const messageId = c.interaction.message.id
-  const result = await stub.start(messageId)
+  const result = await stub.start(actor.userId, messageId)
   if (!result.ok) {
+    if (result.reason === 'not-host' || result.reason === 'no-session') {
+      return c.ephemeral().res(DENIED_MESSAGE[result.reason])
+    }
     const msg = result.reason === 'no-quiz' ? 'クイズを選択してください。' : '設問がありません。'
     return c.ephemeral().res(msg)
   }

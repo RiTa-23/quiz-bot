@@ -54,10 +54,20 @@ export type AnswerOutcome =
       next: NextStep
     }
 
+/** 設定GUIの操作結果。操作できるのはホスト（/quiz play の実行者）だけ。 */
+export type ControlResult =
+  | { ok: true; view: DraftView }
+  | { ok: false; reason: 'not-host' | 'no-session' }
+
+/** /quiz play の結果。進行中セッションを他人が上書きするのを防ぐ。 */
+export type OpenDraftResult =
+  | { ok: true; view: DraftView }
+  | { ok: false; reason: 'active-session'; hostUserId: string }
+
 /** DO.start の結果。 */
 export type StartResult =
   | { ok: true; first: PublicSessionQuestion; number: number; total: number; mode: Mode }
-  | { ok: false; reason: 'no-quiz' | 'no-questions' }
+  | { ok: false; reason: 'no-quiz' | 'no-questions' | 'not-host' | 'no-session' }
 
 /** 回答入力（4択/○×はインデックス、自由記述はテキスト）。 */
 export type AnswerInput = { kind: 'choice'; idx: number } | { kind: 'text'; text: string }
