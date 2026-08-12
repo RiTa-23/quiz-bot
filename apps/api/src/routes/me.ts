@@ -17,10 +17,7 @@ function buildBotInstallUrl(clientId: string): string {
   return url.toString()
 }
 
-/**
- * ログイン状態と、操作対象に選べるサーバー一覧を返す。未ログインは 401。
- * 一覧は Bot が導入済みのサーバーのみ（未導入のサーバーを選んでも何も操作できないため）。
- */
+/** 一覧は Bot 導入済みに絞る。未導入のサーバーを選んでも出題・記録ができないため。 */
 meRoutes.get('/me', async (c) => {
   const session = await resolveSession(c.env, getCookie(c, SESSION_COOKIE))
   if (!session) {

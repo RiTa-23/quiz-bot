@@ -5,11 +5,7 @@ import type { Bindings, Variables } from './env'
 
 type Ctx = Context<{ Bindings: Bindings; Variables: Variables }>
 
-/**
- * クライアントが渡した guild_id が、ログインユーザーの所属サーバーに含まれるか検証する。
- * 含まれない guild_id を権限判定の Actor に使わせない（Issue #4）。
- * guildId を渡さない場合は guildId=null の Actor を返す（作成者本人としての管理操作用）。
- */
+/** guildId=null は「サーバーに紐づかない管理操作（作成者本人としての判定）」を意味する。 */
 export function actorForGuild(c: Ctx, guildId: string | null | undefined): Actor {
   const userId = c.get('userId')
   if (guildId === null || guildId === undefined || guildId === '') {
@@ -22,7 +18,6 @@ export function actorForGuild(c: Ctx, guildId: string | null | undefined): Actor
   return { userId, guildId }
 }
 
-/** クエリ文字列 `guild_id` から検証済み Actor を作る。 */
 export function actorFromQuery(c: Ctx): Actor {
   return actorForGuild(c, c.req.query('guild_id') ?? null)
 }

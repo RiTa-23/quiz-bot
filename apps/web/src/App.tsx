@@ -10,7 +10,6 @@ import { QuizDetailPage } from './pages/QuizDetailPage'
 import { QuizListPage } from './pages/QuizListPage'
 import { StatsPage } from './pages/StatsPage'
 
-/** ログイン必須の領域。/api/me でセッションを確認し、guildコンテキストを供給する。 */
 function AuthedApp() {
   const { data: me, loading, unauthorized, error, reload } = useApi<Me>('/api/me')
 

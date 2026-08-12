@@ -2,7 +2,16 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EditorSettingsCard } from '../components/EditorSettingsCard'
 import { QuestionForm } from '../components/QuestionForm'
-import { Badge, Button, Card, ErrorNote, Spinner } from '../components/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  ErrorNote,
+  Field,
+  Spinner,
+  TextArea,
+  TextInput,
+} from '../components/ui'
 import { useGuild } from '../lib/GuildContext'
 import { api } from '../lib/api'
 import { useApi } from '../lib/hooks'
@@ -31,22 +40,26 @@ export function QuizDetailPage() {
   const canEdit = data.isOwner || data.role === 'editor'
   const canManage = data.isOwner
 
-  const run = async (fn: () => Promise<unknown>) => {
+  // 失敗を呼び出し側に伝える。成功時のみフォームを閉じ、入力内容を失わせない
+  const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
     setActionError(null)
     try {
       await fn()
       reload()
+      return true
     } catch (e) {
       setActionError(e instanceof Error ? e.message : '操作に失敗しました')
+      return false
     }
   }
 
-  const addQuestion = (input: QuestionInput) =>
-    run(() => api.post(`/api/quizzes/${data.id}/questions`, input)).then(() => setAdding(false))
-  const updateQuestion = (qid: string, input: QuestionInput) =>
-    run(() => api.patch(`/api/quizzes/${data.id}/questions/${qid}`, input)).then(() =>
-      setEditingId(null),
-    )
+  const addQuestion = async (input: QuestionInput) => {
+    if (await run(() => api.post(`/api/quizzes/${data.id}/questions`, input))) setAdding(false)
+  }
+  const updateQuestion = async (qid: string, input: QuestionInput) => {
+    if (await run(() => api.patch(`/api/quizzes/${data.id}/questions/${qid}`, input)))
+      setEditingId(null)
+  }
   const deleteQuestion = (qid: string) =>
     run(() => api.delete(`/api/quizzes/${data.id}/questions/${qid}`))
 
@@ -211,22 +224,12 @@ function QuizMetaCard({
   return (
     <Card className="space-y-3">
       <h2 className="text-lg font-medium">クイズ設定</h2>
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-gray-700">タイトル</span>
-        <input
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </label>
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-gray-700">説明</span>
-        <textarea
-          className="min-h-16 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </label>
+      <Field label="タイトル">
+        <TextInput value={title} onChange={(e) => setTitle(e.target.value)} />
+      </Field>
+      <Field label="説明">
+        <TextArea value={description} onChange={(e) => setDescription(e.target.value)} />
+      </Field>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

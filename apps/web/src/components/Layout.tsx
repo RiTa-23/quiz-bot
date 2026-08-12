@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useGuild } from '../lib/GuildContext'
 import { logout } from '../lib/api'
-import { Select } from './ui'
+import { ErrorNote, Select } from './ui'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-md px-3 py-1.5 text-sm font-medium ${
@@ -13,9 +13,17 @@ export function Layout({ children }: { children: ReactNode }) {
   const { me, guildId, setGuildId } = useGuild()
   const navigate = useNavigate()
 
+  const [logoutError, setLogoutError] = useState<string | null>(null)
+
+  // 失敗時に遷移すると、セッションが残ったままログアウトしたと誤認させるため留まる
   const onLogout = async () => {
-    await logout().catch(() => {})
-    navigate('/login')
+    setLogoutError(null)
+    try {
+      await logout()
+      navigate('/login')
+    } catch {
+      setLogoutError('ログアウトに失敗しました。通信状況を確認して、もう一度お試しください。')
+    }
   }
 
   return (
@@ -59,7 +67,14 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-4xl px-4 py-6">
+        {logoutError && (
+          <div className="mb-4">
+            <ErrorNote message={logoutError} />
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   )
 }

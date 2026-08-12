@@ -28,6 +28,10 @@
 
 **サーバー所属の検証（重要）:** クライアントが渡す `guild_id` / `:guildId` は、そのまま信用せず**セッションに保存した所属サーバー一覧と照合する**。所属していないサーバーIDを指定した場合は `403 FORBIDDEN` を返す（他人のサーバーになりすまして一覧・統計・出題記録を操作されるのを防ぐ）。`guild_id` を省略した呼び出しは `guildId = null` の `Actor` になり、サーバー横断の管理操作（作成者本人チェック）に用いる。
 
+検証対象はクエリの `guild_id` とパスの `:guildId` に限らず、**ボディで受け取るサーバーIDも同様**に照合する。具体的には `POST /api/quizzes/:id/shares` と `DELETE /api/quizzes/:id/shares` の `target_guild_id`、`PUT /api/quizzes/:id/editors/guild` の `guild_id`、`POST /api/quizzes/:id/questions/:qid/attempts` の `guild_id` で、未所属なら `403 FORBIDDEN`。
+
+なお設問の追加・更新・削除は「作成者本人 or Editor」で判定するが、**Editor はサーバー単位の指定を含む**ため、クエリの `guild_id` を渡さないとサーバー単位の編集者が権限を失う。Web からは選択中のサーバーを必ず `guild_id` として送ること。
+
 ---
 
 ## クイズ
@@ -188,14 +192,16 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 ### `GET /api/guilds/:guildId/stats/ranking`
 サーバー内の**1人モード**正答率ランキング（`quiz_attempts` 由来。Discordの1人モードのプレイ結果とWebプレビューの回答の両方を含む）。
 
-- Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）, `limit`（任意。未指定なら全件）
+- Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）, `limit`（任意。未指定なら全件・最大100）
+- `period` / `limit` は不正な値なら `422 VALIDATION_ERROR`
 - Response: `{ userId, totalAttempts, correctCount, correctRate }[]`
 - `:guildId` は所属検証あり（未所属は `403`）
 
 ### `GET /api/guilds/:guildId/stats/buzz-ranking`
 サーバー内の**早押し**獲得数ランキング。
 
-- Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）
+- Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）, `limit`（任意。未指定なら全件・最大100）
+- `period` / `limit` は不正な値なら `422 VALIDATION_ERROR`
 - Response: `{ userId, winCount, answeredCount }[]`
 - `:guildId` は所属検証あり
 

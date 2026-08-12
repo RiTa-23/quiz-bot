@@ -10,7 +10,6 @@ const linesToArr = (s: string) =>
     .map((x) => x.trim())
     .filter(Boolean)
 
-/** 設問の新規追加・編集フォーム。initial があれば編集モード。 */
 export function QuestionForm({
   initial,
   onSubmit,
@@ -30,7 +29,8 @@ export function QuestionForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const choices = useMemo(() => linesToArr(choicesText), [choicesText])
+  // 重複した選択肢はReactのkey衝突と正解チェックの誤動作（同じ値が同時に切り替わる）を招くため除く
+  const choices = useMemo(() => [...new Set(linesToArr(choicesText))], [choicesText])
 
   const submit = async () => {
     setError(null)

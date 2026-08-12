@@ -144,7 +144,7 @@ quizzesRoutes.post('/:id/questions', async (c) => {
   try {
     const body = questionSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const question = await addQuestion(db, actorForGuild(c, null), c.req.param('id'), {
+    const question = await addQuestion(db, actorFromQuery(c), c.req.param('id'), {
       type: body.type,
       body: body.body,
       choices: body.choices,
@@ -166,7 +166,7 @@ quizzesRoutes.patch('/:id/questions/:qid', async (c) => {
     const db = createDb(c.env.DB)
     const question = await updateQuestion(
       db,
-      actorForGuild(c, null),
+      actorFromQuery(c),
       c.req.param('id'),
       c.req.param('qid'),
       {
@@ -187,7 +187,7 @@ quizzesRoutes.patch('/:id/questions/:qid', async (c) => {
 quizzesRoutes.delete('/:id/questions/:qid', async (c) => {
   try {
     const db = createDb(c.env.DB)
-    await deleteQuestion(db, actorForGuild(c, null), c.req.param('id'), c.req.param('qid'))
+    await deleteQuestion(db, actorFromQuery(c), c.req.param('id'), c.req.param('qid'))
     return c.body(null, 204)
   } catch (error) {
     return handleApiError(c, error)

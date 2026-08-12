@@ -9,7 +9,7 @@ export type AsyncState<T> = {
   reload: () => void
 }
 
-/** GET を叩いて状態を返すフック。path が null の間は待機する。 */
+/** path が null の間は取得しない（依存する選択が未確定のときに使う）。 */
 export function useApi<T>(path: string | null): AsyncState<T> {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
@@ -25,6 +25,7 @@ export function useApi<T>(path: string | null): AsyncState<T> {
     let cancelled = false
     setLoading(true)
     setError(null)
+    setUnauthorized(false)
     api
       .get<T>(path)
       .then((d) => {

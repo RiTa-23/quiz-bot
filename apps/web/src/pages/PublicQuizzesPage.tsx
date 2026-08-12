@@ -94,7 +94,8 @@ export function PublicQuizzesPage() {
         ))}
       </section>
 
-      {added.data && added.data.length > 0 && (
+      {added.error && <ErrorNote message={added.error} />}
+      {!added.error && added.data && added.data.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-sm font-medium text-gray-500">追加済み</h2>
           {added.data.map((q) => (

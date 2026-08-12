@@ -4,6 +4,8 @@ import { useGuild } from '../lib/GuildContext'
 import { useApi } from '../lib/hooks'
 import type { BuzzRankingEntry, MemberStats, Quiz, QuizStats, RankingEntry } from '../lib/types'
 
+const RANKING_SIZE = 10
+
 const pct = (correct: number, total: number) =>
   total > 0 ? `${Math.round((correct / total) * 100)}%` : '—'
 
@@ -62,43 +64,55 @@ function MyStats({ guildId }: { guildId: string }) {
 }
 
 function Rankings({ guildId }: { guildId: string }) {
-  const solo = useApi<RankingEntry[]>(`/api/guilds/${guildId}/stats/ranking`)
-  const buzz = useApi<BuzzRankingEntry[]>(`/api/guilds/${guildId}/stats/buzz-ranking`)
+  const solo = useApi<RankingEntry[]>(`/api/guilds/${guildId}/stats/ranking?limit=${RANKING_SIZE}`)
+  const buzz = useApi<BuzzRankingEntry[]>(
+    `/api/guilds/${guildId}/stats/buzz-ranking?limit=${RANKING_SIZE}`,
+  )
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Card>
         <h2 className="mb-2 text-lg font-medium">🧍 1人モード ランキング</h2>
         {solo.loading && <Spinner />}
-        {solo.data && solo.data.length === 0 && <p className="text-sm text-gray-500">記録なし</p>}
+        {!solo.loading && solo.error && <ErrorNote message={solo.error} />}
+        {!solo.loading && !solo.error && solo.data?.length === 0 && (
+          <p className="text-sm text-gray-500">記録なし</p>
+        )}
         <ol className="space-y-1 text-sm">
-          {solo.data?.slice(0, 10).map((e, i) => (
-            <li key={e.userId} className="flex justify-between">
-              <span>
-                {i + 1}. <UserTag id={e.userId} />
-              </span>
-              <span className="text-gray-500">
-                {e.correctCount}正解（{pct(e.correctCount, e.totalAttempts)}）
-              </span>
-            </li>
-          ))}
+          {!solo.loading &&
+            !solo.error &&
+            solo.data?.map((e, i) => (
+              <li key={e.userId} className="flex justify-between">
+                <span>
+                  {i + 1}. <UserTag id={e.userId} />
+                </span>
+                <span className="text-gray-500">
+                  {e.correctCount}正解（{pct(e.correctCount, e.totalAttempts)}）
+                </span>
+              </li>
+            ))}
         </ol>
       </Card>
       <Card>
         <h2 className="mb-2 text-lg font-medium">⚡ 早押し ランキング</h2>
         {buzz.loading && <Spinner />}
-        {buzz.data && buzz.data.length === 0 && <p className="text-sm text-gray-500">記録なし</p>}
+        {!buzz.loading && buzz.error && <ErrorNote message={buzz.error} />}
+        {!buzz.loading && !buzz.error && buzz.data?.length === 0 && (
+          <p className="text-sm text-gray-500">記録なし</p>
+        )}
         <ol className="space-y-1 text-sm">
-          {buzz.data?.slice(0, 10).map((e, i) => (
-            <li key={e.userId} className="flex justify-between">
-              <span>
-                {i + 1}. <UserTag id={e.userId} />
-              </span>
-              <span className="text-gray-500">
-                {e.winCount}獲得 / {e.answeredCount}回答
-              </span>
-            </li>
-          ))}
+          {!buzz.loading &&
+            !buzz.error &&
+            buzz.data?.map((e, i) => (
+              <li key={e.userId} className="flex justify-between">
+                <span>
+                  {i + 1}. <UserTag id={e.userId} />
+                </span>
+                <span className="text-gray-500">
+                  {e.winCount}獲得 / {e.answeredCount}回答
+                </span>
+              </li>
+            ))}
         </ol>
       </Card>
     </div>
@@ -115,19 +129,24 @@ function PerQuizStats({ guildId }: { guildId: string }) {
   return (
     <Card className="space-y-3">
       <h2 className="text-lg font-medium">クイズ別の統計</h2>
-      {quizzes.data && (
+      {quizzes.loading && <Spinner />}
+      {!quizzes.loading && quizzes.error && <ErrorNote message={quizzes.error} />}
+      {!quizzes.loading && !quizzes.error && quizzes.data?.length === 0 && (
+        <p className="text-sm text-gray-500">このサーバーにはまだクイズがありません。</p>
+      )}
+      {!quizzes.loading && !quizzes.error && (quizzes.data?.length ?? 0) > 0 && (
         <Select value={quizId} onChange={(e) => setQuizId(e.target.value)}>
           <option value="">クイズを選択…</option>
-          {quizzes.data.map((q) => (
+          {quizzes.data?.map((q) => (
             <option key={q.id} value={q.id}>
               {q.title}
             </option>
           ))}
         </Select>
       )}
-      {stats.loading && <Spinner />}
-      {stats.error && <ErrorNote message={stats.error} />}
-      {stats.data && (
+      {quizId && stats.loading && <Spinner />}
+      {quizId && !stats.loading && stats.error && <ErrorNote message={stats.error} />}
+      {quizId && !stats.loading && !stats.error && stats.data && (
         <div className="space-y-2">
           <p className="text-sm text-gray-700">
             全体: {stats.data.totalAttempts}回答 / 正答率{' '}
@@ -152,7 +171,7 @@ function PerQuizStats({ guildId }: { guildId: string }) {
   )
 }
 
-/** Web側ではユーザー名解決手段が無いためIDの先頭を表示する（将来: 名前解決）。 */
+/** Web側にはユーザー名の解決手段が無いためIDの先頭のみ表示する。 */
 function UserTag({ id }: { id: string }) {
   return <span className="font-mono text-xs text-gray-600">{id.slice(0, 8)}…</span>
 }

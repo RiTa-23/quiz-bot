@@ -25,7 +25,6 @@ export function GuildProvider({
     return me.guilds[0]?.id ?? null
   })
 
-  // 選択中サーバーが一覧から消えたら先頭に戻す
   useEffect(() => {
     if (guildId && !me.guilds.some((g) => g.id === guildId)) {
       setGuildIdState(me.guilds[0]?.id ?? null)

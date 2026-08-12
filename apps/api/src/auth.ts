@@ -63,17 +63,20 @@ authRoutes.get('/discord/callback', async (c) => {
   }
   const user = (await userRes.json()) as { id: string; username: string }
 
-  // ユーザーが所属するサーバー一覧を取得してセッションに保存する。
-  // 以降のAPIは、リクエストで渡された guild_id がこの一覧に含まれるかを検証する（Issue #4）。
+  // 所属サーバー一覧は以降のリクエストの guild_id 検証の唯一の根拠になるため、
+  // 取得に失敗したまま空でセッションを作らない（何も操作できないセッションが出来てしまう）。
   const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
     headers: { Authorization: `Bearer ${token.access_token}` },
   })
-  const guilds: SessionGuild[] = guildsRes.ok
-    ? ((await guildsRes.json()) as { id: string; name: string }[]).map((g) => ({
-        id: g.id,
-        name: g.name,
-      }))
-    : []
+  if (!guildsRes.ok) {
+    return c.json(
+      { error: { code: 'UNAUTHORIZED', message: 'failed to fetch discord guilds' } },
+      401,
+    )
+  }
+  const guilds: SessionGuild[] = ((await guildsRes.json()) as { id: string; name: string }[]).map(
+    (g) => ({ id: g.id, name: g.name }),
+  )
 
   const sessionId = crypto.randomUUID()
   const session: SessionData = { userId: user.id, username: user.username, guilds }
@@ -103,7 +106,6 @@ authRoutes.post('/logout', async (c) => {
 
 export type Session = { userId: string; username: string; guilds: SessionGuild[] }
 
-/** Cookieのsession_idからセッションを解決する。未ログインならnull。 */
 export async function resolveSession(
   env: Bindings,
   sessionId: string | undefined,
@@ -111,9 +113,13 @@ export async function resolveSession(
   if (!sessionId) return null
   const raw = await env.SESSIONS.get(`session:${sessionId}`)
   if (!raw) return null
-  const s = JSON.parse(raw) as SessionData
-  // 旧セッション（guilds未保存）でも落ちないようにする
-  return { userId: s.userId, username: s.username, guilds: s.guilds ?? [] }
+  const s = JSON.parse(raw) as Partial<SessionData>
+  // guilds を持たない旧セッションは所属検証ができず何も操作できないため、破棄して再ログインさせる
+  if (!s.userId || !s.guilds) {
+    await env.SESSIONS.delete(`session:${sessionId}`)
+    return null
+  }
+  return { userId: s.userId, username: s.username ?? '', guilds: s.guilds }
 }
 
 export { SESSION_COOKIE }
