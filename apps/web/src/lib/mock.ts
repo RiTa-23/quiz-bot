@@ -67,7 +67,22 @@ const Q3: Quiz = {
   isOwner: false,
 }
 
-const QUIZZES: Quiz[] = [Q1, Q2, Q3]
+// 別サーバー(g2)で作成し、現在のサーバー(g1)には登録していない自作クイズ。
+// ライブラリには出ず、マイクイズにだけ「未登録」で出る、という分岐の確認用。
+const Q4: Quiz = {
+  id: 'q4',
+  title: '雑学クイズ（未登録）',
+  description: '別のサーバーで作ったまま、このサーバーには追加していないクイズ。',
+  ownerUserId: '100',
+  ownerGuildId: 'g2',
+  visibility: 'private',
+  createdAt: '2026-05-01T00:00:00.000Z',
+  updatedAt: '2026-05-02T00:00:00.000Z',
+  role: 'none',
+  isOwner: true,
+}
+
+const QUIZZES: Quiz[] = [Q1, Q2, Q3, Q4]
 
 const DETAILS: Record<string, QuizDetail> = {
   q1: {
@@ -134,10 +149,21 @@ const DETAILS: Record<string, QuizDetail> = {
       },
     ],
   },
+  q4: {
+    ...Q4,
+    authors: { '100': { id: '100', displayName: 'あなた', avatarUrl: null } },
+    questions: [],
+  },
 }
 
 const PUBLIC_AVAILABLE: PublicQuizListing[] = [
-  { id: 'p1', title: '世界の国旗クイズ', description: '全12問', ownerGuildId: 'g9', questionCount: 12 },
+  {
+    id: 'p1',
+    title: '世界の国旗クイズ',
+    description: '全12問',
+    ownerGuildId: 'g9',
+    questionCount: 12,
+  },
   {
     id: 'p2',
     title: 'ことわざクイズ',
@@ -148,7 +174,13 @@ const PUBLIC_AVAILABLE: PublicQuizListing[] = [
 ]
 
 const PUBLIC_ADDED: PublicQuizListing[] = [
-  { id: 'q3', title: '英単語クイズ（共有）', description: null, ownerGuildId: 'g9', questionCount: 30 },
+  {
+    id: 'q3',
+    title: '英単語クイズ（共有）',
+    description: null,
+    ownerGuildId: 'g9',
+    questionCount: 30,
+  },
 ]
 
 const MEMBER_STATS: MemberStats = {
@@ -163,14 +195,32 @@ const MEMBER_STATS: MemberStats = {
   },
   buzz: { answeredCount: 22, winCount: 14 },
   topQuizzes: [
-    { quizId: 'q1', title: '日本の地理クイズ', totalAttempts: 20, correctCount: 18, correctRate: 0.9 },
-    { quizId: 'q2', title: 'アニメ○×クイズ', totalAttempts: 15, correctCount: 11, correctRate: 0.73 },
+    {
+      quizId: 'q1',
+      title: '日本の地理クイズ',
+      totalAttempts: 20,
+      correctCount: 18,
+      correctRate: 0.9,
+    },
+    {
+      quizId: 'q2',
+      title: 'アニメ○×クイズ',
+      totalAttempts: 15,
+      correctCount: 11,
+      correctRate: 0.73,
+    },
   ],
 }
 
 const SOLO_RANKING: RankingEntry[] = [
   { userId: '100', displayName: 'あなた', totalAttempts: 48, correctCount: 39, correctRate: 0.81 },
-  { userId: '200', displayName: 'ゲスト編集者', totalAttempts: 40, correctCount: 30, correctRate: 0.75 },
+  {
+    userId: '200',
+    displayName: 'ゲスト編集者',
+    totalAttempts: 40,
+    correctCount: 30,
+    correctRate: 0.75,
+  },
   { userId: '300', displayName: 'たろう', totalAttempts: 33, correctCount: 22, correctRate: 0.67 },
   { userId: '400', displayName: null, totalAttempts: 10, correctCount: 5, correctRate: 0.5 },
 ]
@@ -225,7 +275,11 @@ const EDITORS: EditorSettings = {
 
 const NOT_FOUND = Symbol('not-found')
 
-function route(pathname: string, method: string, query: URLSearchParams): unknown | typeof NOT_FOUND {
+function route(
+  pathname: string,
+  method: string,
+  query: URLSearchParams,
+): unknown | typeof NOT_FOUND {
   const seg = pathname.split('/').filter(Boolean)
   const at = (i: number) => seg[i]
 

@@ -40,6 +40,10 @@ export function QuizListPage() {
       />
     )
 
+  // このサーバーで使えるクイズだけを出す（作成元 / 追加済み公開クイズ / Editor指定）。
+  // 自分が作成しただけで未登録のクイズは role が none になり、マイクイズ側に出る。
+  const visible = data?.filter((q) => q.role !== 'none')
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -61,12 +65,17 @@ export function QuizListPage() {
 
       {loading && <Spinner />}
       {error && <ErrorNote message={error} />}
-      {data && data.length === 0 && (
-        <EmptyNote>まだクイズがありません。「＋ 新規作成」から作れます。</EmptyNote>
+      {visible && visible.length === 0 && (
+        <EmptyNote>
+          このサーバーで使えるクイズはありません。「＋
+          新規作成」で作るか、「みつける」から追加できます。
+          <br />
+          自分が作成したクイズは「マイクイズ」で確認できます。
+        </EmptyNote>
       )}
-      {data && data.length > 0 && (
+      {visible && visible.length > 0 && (
         <ul className="divide-y divide-paper-line overflow-hidden rounded border border-paper-line bg-paper-raised shadow-panel">
-          {data.map((q) => (
+          {visible.map((q) => (
             <li key={q.id}>
               <Link
                 to={`/quizzes/${q.id}`}

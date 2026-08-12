@@ -15,8 +15,8 @@
   }
 
   /* チェックボックス・ラジオを盤面の金に揃える（既定の青は配色から浮くため） */
-  input[type='checkbox'],
-  input[type='radio'] {
+  input[type="checkbox"],
+  input[type="radio"] {
     @apply h-4 w-4 accent-gold-500;
   }
 

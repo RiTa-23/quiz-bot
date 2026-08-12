@@ -25,7 +25,11 @@ const MODES = [
   {
     title: '1人で解く',
     lead: 'コマンドを実行した人が、自分のペースで解きます。',
-    points: ['制限時間なし', '全問終わると正解数と正答率を表示', '途中でやめても解いたぶんは記録に残る'],
+    points: [
+      '制限時間なし',
+      '全問終わると正解数と正答率を表示',
+      '途中でやめても解いたぶんは記録に残る',
+    ],
   },
   {
     title: 'みんなで早押し',
@@ -159,10 +163,7 @@ export function LandingPage() {
         </div>
       </Section>
 
-      <Section
-        title="つくる・くばる・ふりかえる"
-        lead="出題以外もひととおりそろっています。"
-      >
+      <Section title="つくる・くばる・ふりかえる" lead="出題以外もひととおりそろっています。">
         <div className="grid gap-4 sm:grid-cols-3">
           {[
             {

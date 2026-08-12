@@ -55,7 +55,12 @@ export function PublicQuizzesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="break-words text-2xl">公開クイズ（{guildName(guildId)} に追加）</h1>
+      <div>
+        <h1 className="break-words text-2xl">みつける</h1>
+        <p className="mt-1 text-sm text-navy-300">
+          他のサーバーが公開しているクイズを探して、{guildName(guildId)} に追加できます。
+        </p>
+      </div>
       {actionError && <ErrorNote message={actionError} />}
 
       <div className="flex gap-2">
