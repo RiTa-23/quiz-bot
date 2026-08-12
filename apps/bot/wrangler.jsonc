@@ -18,6 +18,7 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["QuizSession"] }],
   "vars": {
-    "ENVIRONMENT": "development"
+    "ENVIRONMENT": "development",
+    "WEB_URL": "https://quiz.ritane.co"
   }
 }

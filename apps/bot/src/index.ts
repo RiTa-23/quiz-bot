@@ -38,6 +38,8 @@ import {
 } from './authoring/messages'
 import { handleQuizCommand } from './commands/quiz'
 import type { Bindings } from './env'
+import { handleHelpSelect } from './help/helpHandlers'
+import { HELP_SELECT } from './help/helpMessages'
 import {
   handleCountSelect,
   handleLobbyJoin,
@@ -145,6 +147,7 @@ const app = new DiscordHono<{ Bindings: Bindings }>()
 app.command('quiz', (c) => guard(c, () => handleQuizCommand(c), false))
 
 // 出題設定GUI
+app.component(HELP_SELECT, (c) => guard(c, () => handleHelpSelect(c), true))
 app.component(CFG_QUIZ_SELECT, (c) => guard(c, () => handleQuizSelect(c), true))
 app.component(CFG_PAGE_PREV, (c) => guard(c, () => handlePagePrev(c), true))
 app.component(CFG_PAGE_NEXT, (c) => guard(c, () => handlePageNext(c), true))

@@ -66,18 +66,21 @@ export function QuizDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/quizzes" className="text-sm text-indigo-600 hover:underline">
+        <Link
+          to="/quizzes"
+          className="text-sm text-navy-600 underline-offset-2 hover:text-gold-600 hover:underline"
+        >
           ← クイズ一覧
         </Link>
         <div className="mt-2 flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">{data.title}</h1>
-            {data.description && <p className="mt-1 text-gray-500">{data.description}</p>}
-            <p className="mt-1 text-xs text-gray-400">
+            <h1 className="text-2xl text-navy-900">{data.title}</h1>
+            {data.description && <p className="mt-1 text-navy-300">{data.description}</p>}
+            <p className="mt-1 text-xs text-navy-200">
               <AuthorLabel author={data.authors[data.ownerUserId]} authorId={data.ownerUserId} />
             </p>
           </div>
-          {data.visibility === 'public' && <Badge tone="indigo">公開</Badge>}
+          {data.visibility === 'public' && <Badge tone="gold">公開</Badge>}
         </div>
       </div>
 
@@ -90,7 +93,7 @@ export function QuizDetailPage() {
       {/* 設問 */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">設問（{data.questions.length}）</h2>
+          <h2 className="rule-gold text-lg">設問（{data.questions.length}）</h2>
           {canEdit && !adding && <Button onClick={() => setAdding(true)}>＋ 設問を追加</Button>}
         </div>
 
@@ -101,7 +104,7 @@ export function QuizDetailPage() {
         )}
 
         {data.questions.length === 0 && !adding && (
-          <p className="text-sm text-gray-500">まだ設問がありません。</p>
+          <p className="text-sm text-navy-300">まだ設問がありません。</p>
         )}
 
         <ul className="space-y-3">
@@ -169,21 +172,21 @@ function QuestionRow({
     <Card>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="mb-1 flex flex-wrap items-center gap-x-1 text-xs text-gray-400">
+          <p className="mb-1 flex flex-wrap items-center gap-x-1 text-xs text-navy-200">
             <span>
               #{index + 1} ・ {TYPE_LABEL[question.type]} ・
             </span>
             <AuthorLabel author={author} authorId={authorId} />
           </p>
-          <p className="text-gray-900">{question.body}</p>
+          <p className="text-navy-900">{question.body}</p>
           {question.choices && (
-            <p className="mt-1 text-sm text-gray-500">{question.choices.join(' / ')}</p>
+            <p className="mt-1 text-sm text-navy-300">{question.choices.join(' / ')}</p>
           )}
           {question.answers && (
-            <p className="mt-1 text-sm text-emerald-600">正解: {question.answers.join(' / ')}</p>
+            <p className="mt-1 text-sm text-correct">正解: {question.answers.join(' / ')}</p>
           )}
           {question.explanation && (
-            <p className="mt-1 text-sm text-gray-500">解説: {question.explanation}</p>
+            <p className="mt-1 text-sm text-navy-300">解説: {question.explanation}</p>
           )}
         </div>
         {canEdit && (
@@ -191,7 +194,7 @@ function QuestionRow({
             <Button variant="ghost" onClick={onEdit}>
               編集
             </Button>
-            <Button variant="ghost" className="text-red-600 hover:bg-red-50" onClick={onDelete}>
+            <Button variant="ghost" className="text-wrong hover:bg-wrong/10" onClick={onDelete}>
               削除
             </Button>
           </div>
@@ -248,7 +251,7 @@ function QuizMetaCard({
 
   return (
     <Card className="space-y-3">
-      <h2 className="text-lg font-medium">クイズ設定</h2>
+      <h2 className="rule-gold text-lg">クイズ設定</h2>
       <Field label="タイトル">
         <TextInput value={title} onChange={(e) => setTitle(e.target.value)} />
       </Field>

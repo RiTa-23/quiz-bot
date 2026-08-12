@@ -95,7 +95,7 @@ export async function handleMyStatsCommand(c: CommandContext<{ Bindings: Binding
 
   const db = createDb(c.env.DB)
   const stats = await getMemberStats(db, actor)
-  return c.res({ content: buildMemberStatsMessage(stats), ...NO_PING })
+  return c.res({ embeds: [buildMemberStatsMessage(stats)], ...NO_PING })
 }
 
 /** /quiz ranking: サーバー内のソロ・早押しランキング。 */
@@ -108,5 +108,5 @@ export async function handleRankingCommand(c: CommandContext<{ Bindings: Binding
     getGuildRanking(db, actor.guildId, { limit: RANKING_LIMIT }),
     getBuzzRanking(db, actor.guildId, { limit: RANKING_LIMIT }),
   ])
-  return c.res({ content: buildRankingMessage(solo, buzz), ...NO_PING })
+  return c.res({ embeds: [buildRankingMessage(solo, buzz)], ...NO_PING })
 }

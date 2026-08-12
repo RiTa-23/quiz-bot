@@ -22,7 +22,7 @@ export function StatsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">{guildName(guildId)} の統計</h1>
+      <h1 className="text-2xl">{guildName(guildId)} の統計</h1>
       <MyStats guildId={guildId} />
       <Rankings guildId={guildId} />
       <PerQuizStats guildId={guildId} />
@@ -37,19 +37,19 @@ function MyStats({ guildId }: { guildId: string }) {
 
   return (
     <Card className="space-y-2">
-      <h2 className="text-lg font-medium">自分の成績</h2>
-      <p className="text-sm text-gray-700">
+      <h2 className="rule-gold text-lg">自分の成績</h2>
+      <p className="text-sm text-navy-700">
         🧍 1人モード: {data.solo.totalAttempts}回答 / 正解 {data.solo.correctCount}（
         {pct(data.solo.correctCount, data.solo.totalAttempts)}）
       </p>
-      <p className="text-sm text-gray-700">
+      <p className="text-sm text-navy-700">
         ⚡ 早押し: {data.buzz.answeredCount}回答 / 獲得 {data.buzz.winCount}（
         {pct(data.buzz.winCount, data.buzz.answeredCount)}）
       </p>
       {data.topQuizzes.length > 0 && (
         <div className="pt-1">
-          <p className="text-sm font-medium text-gray-600">よく遊んだクイズ</p>
-          <ul className="text-sm text-gray-600">
+          <p className="text-sm font-medium text-navy-600">よく遊んだクイズ</p>
+          <ul className="text-sm text-navy-600">
             {data.topQuizzes.map((q) => (
               <li key={q.quizId}>
                 ・{q.title} — {q.totalAttempts}問中 {q.correctCount}正解（
@@ -72,11 +72,11 @@ function Rankings({ guildId }: { guildId: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Card>
-        <h2 className="mb-2 text-lg font-medium">🧍 1人モード ランキング</h2>
+        <h2 className="rule-gold mb-2 text-lg">1人モード ランキング</h2>
         {solo.loading && <Spinner />}
         {!solo.loading && solo.error && <ErrorNote message={solo.error} />}
         {!solo.loading && !solo.error && solo.data?.length === 0 && (
-          <p className="text-sm text-gray-500">記録なし</p>
+          <p className="text-sm text-navy-300">記録なし</p>
         )}
         <ol className="space-y-1 text-sm">
           {!solo.loading &&
@@ -86,7 +86,7 @@ function Rankings({ guildId }: { guildId: string }) {
                 <span>
                   {i + 1}. <UserTag id={e.userId} />
                 </span>
-                <span className="text-gray-500">
+                <span className="text-navy-300">
                   {e.correctCount}正解（{pct(e.correctCount, e.totalAttempts)}）
                 </span>
               </li>
@@ -94,11 +94,11 @@ function Rankings({ guildId }: { guildId: string }) {
         </ol>
       </Card>
       <Card>
-        <h2 className="mb-2 text-lg font-medium">⚡ 早押し ランキング</h2>
+        <h2 className="rule-gold mb-2 text-lg">早押し ランキング</h2>
         {buzz.loading && <Spinner />}
         {!buzz.loading && buzz.error && <ErrorNote message={buzz.error} />}
         {!buzz.loading && !buzz.error && buzz.data?.length === 0 && (
-          <p className="text-sm text-gray-500">記録なし</p>
+          <p className="text-sm text-navy-300">記録なし</p>
         )}
         <ol className="space-y-1 text-sm">
           {!buzz.loading &&
@@ -108,7 +108,7 @@ function Rankings({ guildId }: { guildId: string }) {
                 <span>
                   {i + 1}. <UserTag id={e.userId} />
                 </span>
-                <span className="text-gray-500">
+                <span className="text-navy-300">
                   {e.winCount}獲得 / {e.answeredCount}回答
                 </span>
               </li>
@@ -128,11 +128,11 @@ function PerQuizStats({ guildId }: { guildId: string }) {
 
   return (
     <Card className="space-y-3">
-      <h2 className="text-lg font-medium">クイズ別の統計</h2>
+      <h2 className="rule-gold text-lg">クイズ別の統計</h2>
       {quizzes.loading && <Spinner />}
       {!quizzes.loading && quizzes.error && <ErrorNote message={quizzes.error} />}
       {!quizzes.loading && !quizzes.error && quizzes.data?.length === 0 && (
-        <p className="text-sm text-gray-500">このサーバーにはまだクイズがありません。</p>
+        <p className="text-sm text-navy-300">このサーバーにはまだクイズがありません。</p>
       )}
       {!quizzes.loading && !quizzes.error && (quizzes.data?.length ?? 0) > 0 && (
         <Select value={quizId} onChange={(e) => setQuizId(e.target.value)}>
@@ -148,7 +148,7 @@ function PerQuizStats({ guildId }: { guildId: string }) {
       {quizId && !stats.loading && stats.error && <ErrorNote message={stats.error} />}
       {quizId && !stats.loading && !stats.error && stats.data && (
         <div className="space-y-2">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-navy-700">
             全体: {stats.data.totalAttempts}回答 / 正答率{' '}
             {pct(stats.data.correctCount, stats.data.totalAttempts)} / 参加者{' '}
             {stats.data.uniqueUserCount}人
@@ -159,7 +159,7 @@ function PerQuizStats({ guildId }: { guildId: string }) {
                 <span className="min-w-0 truncate">
                   {i + 1}. {q.body}
                 </span>
-                <span className="shrink-0 text-gray-500">
+                <span className="shrink-0 text-navy-300">
                   {pct(q.correctCount, q.totalAttempts)}（{q.totalAttempts}回）
                 </span>
               </li>
@@ -173,5 +173,5 @@ function PerQuizStats({ guildId }: { guildId: string }) {
 
 /** Web側にはユーザー名の解決手段が無いためIDの先頭のみ表示する。 */
 function UserTag({ id }: { id: string }) {
-  return <span className="font-mono text-xs text-gray-600">{id.slice(0, 8)}…</span>
+  return <span className="font-mono text-xs text-navy-300">{id.slice(0, 8)}…</span>
 }

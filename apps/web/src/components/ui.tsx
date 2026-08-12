@@ -3,10 +3,13 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
 
 const VARIANT: Record<Variant, string> = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-300',
-  secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200 disabled:opacity-50',
-  danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300',
-  ghost: 'text-indigo-600 hover:bg-indigo-50 disabled:opacity-50',
+  // 主ボタンは金。押し込みを表現するため下辺に濃い金の影を敷く
+  primary:
+    'bg-gold-400 text-navy-900 shadow-raised hover:bg-gold-200 active:translate-y-px active:shadow-none disabled:bg-paper-sunken disabled:text-navy-300 disabled:shadow-none',
+  secondary:
+    'border border-paper-line bg-paper-raised text-navy-700 hover:border-navy-300 hover:bg-paper disabled:opacity-50',
+  danger: 'bg-wrong text-white hover:brightness-110 disabled:opacity-40',
+  ghost: 'text-navy-600 hover:bg-navy-50 disabled:opacity-50',
 }
 
 export function Button({
@@ -17,7 +20,7 @@ export function Button({
   return (
     <button
       type="button"
-      className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${VARIANT[variant]} ${className}`}
+      className={`rounded px-3 py-1.5 text-sm font-bold transition ${VARIANT[variant]} ${className}`}
       {...props}
     />
   )
@@ -25,19 +28,21 @@ export function Button({
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border border-gray-200 bg-white p-4 shadow-sm ${className}`}>
+    <div
+      className={`rounded border border-paper-line bg-paper-raised p-4 shadow-panel ${className}`}
+    >
       {children}
     </div>
   )
 }
 
 export function Spinner({ label = '読み込み中…' }: { label?: string }) {
-  return <p className="p-6 text-sm text-gray-500">{label}</p>
+  return <p className="p-6 text-sm text-navy-300">{label}</p>
 }
 
 export function ErrorNote({ message }: { message: string }) {
   return (
-    <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+    <div className="rounded border-l-4 border-wrong bg-paper-raised px-3 py-2 text-sm text-wrong shadow-panel">
       {message}
     </div>
   )
@@ -49,7 +54,7 @@ export function NoGuildNotice({
   onRefresh,
 }: { hasGuilds: boolean; installUrl?: string; onRefresh?: () => void }) {
   return (
-    <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+    <div className="rounded border-l-4 border-gold-400 bg-gold-100 p-4 text-sm text-navy-800">
       {hasGuilds ? (
         '操作するサーバーを選択してください。'
       ) : (
@@ -64,7 +69,7 @@ export function NoGuildNotice({
                 href={installUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+                className="rounded bg-navy-900 px-3 py-1.5 text-sm font-bold text-paper hover:bg-navy-700"
               >
                 Botをサーバーに追加する
               </a>
@@ -85,14 +90,14 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   return (
     // biome-ignore lint/a11y/noLabelWithoutControl: children is always a form control
     <label className="block space-y-1">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
+      <span className="text-xs font-bold uppercase tracking-wider text-navy-300">{label}</span>
       {children}
     </label>
   )
 }
 
 const inputBase =
-  'w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
+  'w-full rounded border border-paper-line bg-paper-raised px-3 py-2 text-sm text-navy-900 placeholder:text-navy-200 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-200'
 
 export function TextInput({
   className = '',
@@ -118,14 +123,16 @@ export function Select({
 export function Badge({
   children,
   tone = 'gray',
-}: { children: ReactNode; tone?: 'gray' | 'green' | 'indigo' }) {
+}: { children: ReactNode; tone?: 'gray' | 'green' | 'gold' }) {
   const tones = {
-    gray: 'bg-gray-100 text-gray-600',
-    green: 'bg-emerald-100 text-emerald-700',
-    indigo: 'bg-indigo-100 text-indigo-700',
+    gray: 'border-paper-line bg-paper-sunken text-navy-600',
+    green: 'border-correct/30 bg-correct/10 text-correct',
+    gold: 'border-gold-400 bg-gold-100 text-gold-600',
   }
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>
+    <span
+      className={`inline-block rounded border px-2 py-0.5 text-xs font-bold tracking-wide ${tones[tone]}`}
+    >
       {children}
     </span>
   )

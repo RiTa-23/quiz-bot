@@ -1,3 +1,23 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-navy-900 antialiased;
+  }
+
+  /* 見出しは字間を詰めて太く。番組タイトルのような硬さを出す */
+  h1,
+  h2,
+  h3 {
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  /* 出題パネルの左に入る金の罫。見出しの視認性を上げる装飾 */
+  .rule-gold {
+    @apply border-l-4 border-gold-400 pl-3;
+  }
+}

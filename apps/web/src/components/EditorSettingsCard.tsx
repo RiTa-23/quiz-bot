@@ -67,7 +67,7 @@ export function EditorSettingsCard({ quizId, guildId }: { quizId: string; guildI
 
       {!data.guildAllowed && (
         <div className="space-y-2">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-navy-600">
             個別に許可するユーザー（DiscordユーザーIDを1行に1つ）
           </p>
           <TextArea
