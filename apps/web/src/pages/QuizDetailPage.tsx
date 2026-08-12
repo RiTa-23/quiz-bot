@@ -13,7 +13,7 @@ import {
   TextInput,
 } from '../components/ui'
 import { useGuild } from '../lib/GuildContext'
-import { api } from '../lib/api'
+import { api, shareUrl } from '../lib/api'
 import { useApi } from '../lib/hooks'
 import type { Author, Question, QuestionInput, QuizDetail } from '../lib/types'
 
@@ -73,16 +73,24 @@ export function QuizDetailPage() {
           ← クイズ一覧
         </Link>
         <div className="mt-2 flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl text-navy-900">{data.title}</h1>
-            {data.description && <p className="mt-1 text-navy-300">{data.description}</p>}
+          <div className="min-w-0">
+            <h1 className="break-words text-2xl text-navy-900">{data.title}</h1>
+            {data.description && (
+              <p className="mt-1 break-words text-navy-300">{data.description}</p>
+            )}
             <p className="mt-1 text-xs text-navy-200">
               <AuthorLabel author={data.authors[data.ownerUserId]} authorId={data.ownerUserId} />
             </p>
           </div>
-          {data.visibility === 'public' && <Badge tone="gold">公開</Badge>}
+          {data.visibility === 'public' && (
+            <div className="shrink-0">
+              <Badge tone="gold">公開</Badge>
+            </div>
+          )}
         </div>
       </div>
+
+      {data.visibility === 'public' && <ShareLink quizId={data.id} />}
 
       {actionError && <ErrorNote message={actionError} />}
 
@@ -92,7 +100,7 @@ export function QuizDetailPage() {
 
       {/* 設問 */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="rule-gold text-lg">設問（{data.questions.length}）</h2>
           {canEdit && !adding && <Button onClick={() => setAdding(true)}>＋ 設問を追加</Button>}
         </div>
@@ -140,7 +148,7 @@ export function QuizDetailPage() {
 
 /** Discordで引けなかったユーザーはIDのままにする（退会済みなどで解決できないことがある） */
 function AuthorLabel({ author, authorId }: { author?: Author; authorId: string }) {
-  if (!author) return <span title={`ユーザーID: ${authorId}`}>作成者: 不明（ID: {authorId}）</span>
+  if (!author) return <span title={`ユーザーID: ${authorId}`}>作成者: 不明なユーザー</span>
   return (
     <span className="inline-flex items-center gap-1 align-middle">
       {author.avatarUrl && (
@@ -148,6 +156,42 @@ function AuthorLabel({ author, authorId }: { author?: Author; authorId: string }
       )}
       作成者: {author.displayName}
     </span>
+  )
+}
+
+/** 公開クイズの共有リンク。設問と正解を含まない紹介ページを指す。 */
+function ShareLink({ quizId }: { quizId: string }) {
+  const url = shareUrl(quizId)
+  const [copied, setCopied] = useState(false)
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // クリップボードが使えない環境ではリンクを直接開いてもらう
+      window.open(url, '_blank', 'noopener')
+    }
+  }
+
+  return (
+    <Card className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-bold uppercase tracking-wider text-navy-300">共有リンク</p>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="block truncate text-sm text-navy-600 underline-offset-2 hover:text-gold-600 hover:underline"
+        >
+          {url}
+        </a>
+      </div>
+      <Button variant="secondary" onClick={copy}>
+        {copied ? 'コピーしました' : 'コピー'}
+      </Button>
+    </Card>
   )
 }
 
@@ -168,17 +212,21 @@ function QuestionRow({
   onEdit: () => void
   onDelete: () => void
 }) {
+  // 誤タップで設問が消えないよう、削除は2段階にする（回答記録も消えて戻せないため）
+  const [confirming, setConfirming] = useState(false)
+
   return (
     <Card>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      {/* 確認ボタンが出ると操作側が広がるため、狭い画面では行を折り返して本文を潰さない */}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0 flex-1 basis-48">
           <p className="mb-1 flex flex-wrap items-center gap-x-1 text-xs text-navy-200">
             <span>
               #{index + 1} ・ {TYPE_LABEL[question.type]} ・
             </span>
             <AuthorLabel author={author} authorId={authorId} />
           </p>
-          <p className="text-navy-900">{question.body}</p>
+          <p className="break-words text-navy-900">{question.body}</p>
           {question.choices && (
             <p className="mt-1 text-sm text-navy-300">{question.choices.join(' / ')}</p>
           )}
@@ -190,13 +238,37 @@ function QuestionRow({
           )}
         </div>
         {canEdit && (
-          <div className="flex shrink-0 gap-1">
-            <Button variant="ghost" onClick={onEdit}>
-              編集
-            </Button>
-            <Button variant="ghost" className="text-wrong hover:bg-wrong/10" onClick={onDelete}>
-              削除
-            </Button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+            {confirming ? (
+              <>
+                <span className="mr-1 text-xs text-navy-300">削除しますか？</span>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    setConfirming(false)
+                    onDelete()
+                  }}
+                >
+                  削除する
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirming(false)}>
+                  やめる
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={onEdit}>
+                  編集
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-wrong hover:bg-wrong/10"
+                  onClick={() => setConfirming(true)}
+                >
+                  削除
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>

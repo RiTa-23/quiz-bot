@@ -22,7 +22,7 @@ export function StatsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl">{guildName(guildId)} の統計</h1>
+      <h1 className="break-words text-2xl">{guildName(guildId)} の統計</h1>
       <MyStats guildId={guildId} />
       <Rankings guildId={guildId} />
       <PerQuizStats guildId={guildId} />
@@ -82,11 +82,11 @@ function Rankings({ guildId }: { guildId: string }) {
           {!solo.loading &&
             !solo.error &&
             solo.data?.map((e, i) => (
-              <li key={e.userId} className="flex justify-between">
-                <span>
-                  {i + 1}. <UserTag id={e.userId} />
+              <li key={e.userId} className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate">
+                  {i + 1}. <UserTag id={e.userId} name={e.displayName} />
                 </span>
-                <span className="text-navy-300">
+                <span className="shrink-0 whitespace-nowrap text-navy-300">
                   {e.correctCount}正解（{pct(e.correctCount, e.totalAttempts)}）
                 </span>
               </li>
@@ -104,11 +104,11 @@ function Rankings({ guildId }: { guildId: string }) {
           {!buzz.loading &&
             !buzz.error &&
             buzz.data?.map((e, i) => (
-              <li key={e.userId} className="flex justify-between">
-                <span>
-                  {i + 1}. <UserTag id={e.userId} />
+              <li key={e.userId} className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate">
+                  {i + 1}. <UserTag id={e.userId} name={e.displayName} />
                 </span>
-                <span className="text-navy-300">
+                <span className="shrink-0 whitespace-nowrap text-navy-300">
                   {e.winCount}獲得 / {e.answeredCount}回答
                 </span>
               </li>
@@ -159,7 +159,7 @@ function PerQuizStats({ guildId }: { guildId: string }) {
                 <span className="min-w-0 truncate">
                   {i + 1}. {q.body}
                 </span>
-                <span className="shrink-0 text-navy-300">
+                <span className="shrink-0 whitespace-nowrap text-navy-300">
                   {pct(q.correctCount, q.totalAttempts)}（{q.totalAttempts}回）
                 </span>
               </li>
@@ -171,7 +171,21 @@ function PerQuizStats({ guildId }: { guildId: string }) {
   )
 }
 
-/** Web側にはユーザー名の解決手段が無いためIDの先頭のみ表示する。 */
-function UserTag({ id }: { id: string }) {
-  return <span className="font-mono text-xs text-navy-300">{id.slice(0, 8)}…</span>
+/**
+ * ユーザー表示はDiscordの表示名に統一する。
+ * 退会などで名前を引けなかった場合だけ、識別できるようIDを出す。
+ */
+function UserTag({ id, name }: { id: string; name: string | null }) {
+  if (!name) {
+    return (
+      <span className="font-mono text-xs text-navy-200" title={id}>
+        不明なユーザー
+      </span>
+    )
+  }
+  return (
+    <span className="font-medium text-navy-900" title={id}>
+      {name}
+    </span>
+  )
 }

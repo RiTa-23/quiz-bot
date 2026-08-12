@@ -20,7 +20,7 @@ export function Button({
   return (
     <button
       type="button"
-      className={`rounded px-3 py-1.5 text-sm font-bold transition ${VARIANT[variant]} ${className}`}
+      className={`shrink-0 whitespace-nowrap rounded px-3 py-1.5 text-sm font-bold transition ${VARIANT[variant]} ${className}`}
       {...props}
     />
   )
@@ -29,7 +29,7 @@ export function Button({
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded border border-paper-line bg-paper-raised p-4 shadow-panel ${className}`}
+      className={`min-w-0 rounded border border-paper-line bg-paper-raised p-4 shadow-panel ${className}`}
     >
       {children}
     </div>
@@ -131,7 +131,7 @@ export function Badge({
   }
   return (
     <span
-      className={`inline-block rounded border px-2 py-0.5 text-xs font-bold tracking-wide ${tones[tone]}`}
+      className={`inline-block whitespace-nowrap rounded border px-2 py-0.5 text-xs font-bold tracking-wide ${tones[tone]}`}
     >
       {children}
     </span>

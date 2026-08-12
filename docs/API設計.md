@@ -12,11 +12,17 @@
 - `GET /auth/discord/callback` — OAuth2 コールバック、セッション発行。この時に `/users/@me/guilds` を取得し、**所属サーバー一覧をセッションに保存する**
 - `POST /auth/logout` — ログアウト
 
+### `GET /api/bot-install-url`
+Bot導入用のOAuth2 URLを返す。**認証不要**（ルートの紹介ページがログイン前に導入導線を出すため）。
+
+- Response: `{ botInstallUrl }`
+
 ### `GET /api/me`
 ログイン状態と、操作対象に選べるサーバー一覧を返す。未ログインは `401 UNAUTHORIZED`。
 
 - Query: `refresh=1`（任意）— Bot 参加サーバーのキャッシュを無視して取り直す。Bot 導入直後に反映を待たせないための導線で、常用しない
-- Response: `{ userId, username, guilds: { id, name }[], botInstallUrl }`
+- Response: `{ userId, username, displayName, guilds: { id, name }[], botInstallUrl }`
+- `displayName` は Discord の表示名（`global_name`。未設定なら `username`）。**Web上のユーザー表示はこれに統一する**
 - `guilds` は「**ユーザーが所属し、かつ Bot が導入済み**」のサーバーのみ。Web の画面上部のサーバー選択に使う（Bot 未導入のサーバーを選んでも出題・記録ができないため候補に出さない）
 - Bot の参加サーバーは Bot トークンで `/users/@me/guilds` を引いて判定し、Discord のレート制限を避けるため KV に 1 分キャッシュする（`bot:guild_ids`）
 - Bot トークン未設定や取得失敗時は**絞り込まずに全所属サーバーを返す**（一覧が引けないことを理由に操作を止めない）
@@ -83,6 +89,15 @@ SNS共有用のOGP画像（PNG 1200x630）を生成して返す。**認証・COR
 - Web の `index.html` の `og:image` がこのエンドポイントを指す
 - 日本語フォントはWorkerに同梱せず、描画する文字だけのサブセットを Google Fonts から取得する（`text=` 指定。UAを送らないと satori が読めるTTFが返る）
 - 生成結果は `Cache-Control: public, max-age=86400`
+
+### `GET /q/:id`
+公開クイズの共有ページ（HTML）。**認証・CORSの対象外**。
+
+- `visibility = 'public'` のクイズのみ200。非公開・存在しないIDは404
+- クローラー向けにサーバー側でHTMLを組み立て、`og:title` にクイズ名、`og:image` に `/og?title=...` を入れる
+  - SPAの `index.html` は全URLで同一のため、URLごとに違うOGPを出すにはこの経路が要る
+- **設問本文と正解は含めない**。出すのはタイトル・説明・設問数・形式の内訳・作成者の表示名のみ
+- `Cache-Control: public, max-age=300`
 
 ---
 
@@ -210,7 +225,8 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 
 - Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）, `limit`（任意。未指定なら全件・最大100）
 - `period` / `limit` は不正な値なら `422 VALIDATION_ERROR`
-- Response: `{ userId, totalAttempts, correctCount, correctRate }[]`
+- Response: `{ userId, totalAttempts, correctCount, correctRate, displayName }[]`
+- `displayName` は Discord の表示名。APIがBotトークンで解決してKVに1時間キャッシュする（IDのままではWebで誰の記録か分からないため）。退会などで引けなかった場合は `null`
 - `:guildId` は所属検証あり（未所属は `403`）
 
 ### `GET /api/guilds/:guildId/stats/buzz-ranking`
@@ -218,7 +234,8 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 
 - Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）, `limit`（任意。未指定なら全件・最大100）
 - `period` / `limit` は不正な値なら `422 VALIDATION_ERROR`
-- Response: `{ userId, winCount, answeredCount }[]`
+- Response: `{ userId, winCount, answeredCount, displayName }[]`
+- `displayName` の扱いは1人モードのランキングと同じ
 - `:guildId` は所属検証あり
 
 ### `GET /api/guilds/:guildId/me/stats`

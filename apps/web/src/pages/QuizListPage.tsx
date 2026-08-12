@@ -41,8 +41,8 @@ export function QuizListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl">{guildName(guildId)} のクイズ</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="min-w-0 break-words text-2xl">{guildName(guildId)} のクイズ</h1>
         <Button onClick={() => setCreating((v) => !v)}>
           {creating ? '閉じる' : '＋ 新規作成'}
         </Button>

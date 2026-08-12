@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { getCookie } from 'hono/cookie'
 import { SESSION_COOKIE, resolveSession } from '../auth'
 import { fetchBotGuildIds } from '../botGuilds'
+import { fetchUserSummaries } from '../discordUsers'
 import type { Bindings, Variables } from '../env'
 
 export const meRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -17,11 +18,24 @@ function buildBotInstallUrl(clientId: string): string {
   return url.toString()
 }
 
+/** 紹介ページ用。導入導線はログイン前にも必要なので認証を要求しない。 */
+meRoutes.get('/bot-install-url', (c) =>
+  c.json({ botInstallUrl: buildBotInstallUrl(c.env.DISCORD_CLIENT_ID) }),
+)
+
 /** 一覧は Bot 導入済みに絞る。未導入のサーバーを選んでも出題・記録ができないため。 */
 meRoutes.get('/me', async (c) => {
   const session = await resolveSession(c.env, getCookie(c, SESSION_COOKIE))
   if (!session) {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'ログインが必要です' } }, 401)
+  }
+
+  // セッション作成前の実装では displayName を保存していないため、
+  // 無い場合はここでDiscordから解決する（再ログインを強いないため）。
+  let displayName = session.displayName
+  if (!displayName) {
+    const users = await fetchUserSummaries(c.env, [session.userId])
+    displayName = users[session.userId]?.displayName
   }
 
   const forceRefresh = c.req.query('refresh') === '1'
@@ -31,6 +45,7 @@ meRoutes.get('/me', async (c) => {
   return c.json({
     userId: session.userId,
     username: session.username,
+    displayName: displayName || session.username,
     guilds,
     botInstallUrl: buildBotInstallUrl(c.env.DISCORD_CLIENT_ID),
   })

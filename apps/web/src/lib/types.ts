@@ -5,6 +5,8 @@ export type QuestionType = 'multiple_choice' | 'true_false' | 'free_text'
 export type Me = {
   userId: string
   username: string
+  /** Discordの表示名。画面上のユーザー表示はこれに統一する */
+  displayName: string
   guilds: { id: string; name: string }[]
   botInstallUrl: string
 }
@@ -88,14 +90,17 @@ export type QuizStats = {
   questions: QuizQuestionStats[]
 }
 
-export type RankingEntry = {
+/** APIが添えるDiscordの表示名。引けなかったユーザーは null */
+type WithDisplayName = { displayName: string | null }
+
+export type RankingEntry = WithDisplayName & {
   userId: string
   totalAttempts: number
   correctCount: number
   correctRate: number
 }
 
-export type BuzzRankingEntry = {
+export type BuzzRankingEntry = WithDisplayName & {
   userId: string
   winCount: number
   answeredCount: number

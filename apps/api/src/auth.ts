@@ -6,7 +6,13 @@ const SESSION_COOKIE = 'session_id'
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30 // 30日
 
 export type SessionGuild = { id: string; name: string }
-type SessionData = { userId: string; username: string; guilds: SessionGuild[] }
+type SessionData = {
+  userId: string
+  username: string
+  /** Discordの表示名（global_name）。未設定のアカウントもあるため optional */
+  displayName?: string
+  guilds: SessionGuild[]
+}
 
 const DISCORD_API = 'https://discord.com/api/v10'
 
@@ -61,7 +67,11 @@ authRoutes.get('/discord/callback', async (c) => {
   if (!userRes.ok) {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'failed to fetch discord user' } }, 401)
   }
-  const user = (await userRes.json()) as { id: string; username: string }
+  const user = (await userRes.json()) as {
+    id: string
+    username: string
+    global_name?: string | null
+  }
 
   // 所属サーバー一覧は以降のリクエストの guild_id 検証の唯一の根拠になるため、
   // 取得に失敗したまま空でセッションを作らない（何も操作できないセッションが出来てしまう）。
@@ -79,7 +89,12 @@ authRoutes.get('/discord/callback', async (c) => {
   )
 
   const sessionId = crypto.randomUUID()
-  const session: SessionData = { userId: user.id, username: user.username, guilds }
+  const session: SessionData = {
+    userId: user.id,
+    username: user.username,
+    displayName: user.global_name ?? user.username,
+    guilds,
+  }
   await c.env.SESSIONS.put(`session:${sessionId}`, JSON.stringify(session), {
     expirationTtl: SESSION_TTL_SECONDS,
   })
@@ -104,7 +119,13 @@ authRoutes.post('/logout', async (c) => {
   return c.json({ ok: true })
 })
 
-export type Session = { userId: string; username: string; guilds: SessionGuild[] }
+export type Session = {
+  userId: string
+  username: string
+  /** この変更より前に作られたセッションには入っていないため optional。 */
+  displayName?: string
+  guilds: SessionGuild[]
+}
 
 export async function resolveSession(
   env: Bindings,
@@ -119,7 +140,14 @@ export async function resolveSession(
     await env.SESSIONS.delete(`session:${sessionId}`)
     return null
   }
-  return { userId: s.userId, username: s.username ?? '', guilds: s.guilds }
+  // displayName は旧セッションには無い。ここでは埋めず、呼び出し側でDiscordから解決させる
+  // （username で代用すると、他のユーザーの表示だけが表示名になり画面内で食い違うため）
+  return {
+    userId: s.userId,
+    username: s.username ?? '',
+    ...(s.displayName ? { displayName: s.displayName } : {}),
+    guilds: s.guilds,
+  }
 }
 
 export { SESSION_COOKIE }
