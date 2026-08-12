@@ -29,7 +29,10 @@ statsRoutes.get('/users/:userId/stats', async (c) => {
       )
     }
     const db = createDb(c.env.DB)
-    const stats = await getUserStats(db, c.req.param('userId'))
+    // 負数や小数をそのまま渡すと SQLite の LIMIT が無制限扱いになるため、整数へ丸めて範囲内に収める
+    const raw = Number(c.req.query('limit'))
+    const limit = Number.isFinite(raw) && raw >= 1 ? Math.min(Math.floor(raw), 500) : 100
+    const stats = await getUserStats(db, c.req.param('userId'), { limit })
     return c.json(stats)
   } catch (error) {
     return handleApiError(c, error)

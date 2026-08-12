@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { questions, quizAttempts } from '../db/schema'
 import { conflict, notFound } from '../errors'
@@ -14,8 +14,10 @@ export type SubmitAttemptResult = {
 }
 
 /**
- * 回答結果の記録・正誤判定。
+ * 回答結果の記録・正誤判定（Webのプレビュー実行用）。
  * 同一 (question_id, guild_id, user_id) の重複回答は CONFLICT で拒否する（1設問1回まで）。
+ * この制限はプレビュー経由の回答（session_id が null の行）にのみ適用する。
+ * 1人モードのセッションは同じ設問を繰り返し遊べるため対象外（recordSoloAttempts が別途記録する）。
  */
 export async function submitAttempt(
   db: Database,
@@ -49,6 +51,7 @@ export async function submitAttempt(
         eq(quizAttempts.questionId, questionId),
         eq(quizAttempts.guildId, actor.guildId),
         eq(quizAttempts.userId, actor.userId),
+        isNull(quizAttempts.sessionId),
       ),
     )
     .limit(1)

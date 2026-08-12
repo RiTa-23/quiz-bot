@@ -13,6 +13,10 @@
       "migrations_dir": "../../packages/core/migrations"
     }
   ],
+  "durable_objects": {
+    "bindings": [{ "name": "QUIZ_SESSION", "class_name": "QuizSession" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["QuizSession"] }],
   "vars": {
     "ENVIRONMENT": "development"
   }

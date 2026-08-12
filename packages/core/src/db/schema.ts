@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
+import { index, integer, sqliteTable, text, unique, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 const nowIso = () => sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
 
@@ -11,7 +11,7 @@ export const quizzes = sqliteTable(
     description: text('description'),
     ownerUserId: text('owner_user_id').notNull(),
     ownerGuildId: text('owner_guild_id').notNull(),
-    visibility: text('visibility', { enum: ['private', 'shared'] })
+    visibility: text('visibility', { enum: ['private', 'public'] })
       .notNull()
       .default('private'),
     createdAt: text('created_at').notNull().default(nowIso()),
@@ -96,16 +96,43 @@ export const quizAttempts = sqliteTable(
     isCorrect: integer('is_correct', { mode: 'boolean' }).notNull(),
     submittedAnswer: text('submitted_answer'),
     answeredAt: text('answered_at').notNull().default(nowIso()),
+    // null = Webプレビュー経由の回答 / 非null = 1人モードセッションの回答
+    sessionId: text('session_id'),
   },
   (table) => [
-    unique('quiz_attempts_question_guild_user_unique').on(
-      table.questionId,
-      table.guildId,
-      table.userId,
-    ),
+    // 「1設問1回まで」はプレビュー経由の回答にのみ適用する。
+    // 1人モードは同じクイズを繰り返し遊べるため、セッションごとに重複記録を許す。
+    uniqueIndex('quiz_attempts_preview_question_guild_user_unique')
+      .on(table.questionId, table.guildId, table.userId)
+      .where(sql`${table.sessionId} is null`),
     index('quiz_attempts_quiz_id_idx').on(table.quizId),
     index('quiz_attempts_guild_user_idx').on(table.guildId, table.userId),
     index('quiz_attempts_user_id_idx').on(table.userId),
+    index('quiz_attempts_session_id_idx').on(table.sessionId),
+  ],
+)
+
+export const buzzAttempts = sqliteTable(
+  'buzz_attempts',
+  {
+    id: text('id').primaryKey(),
+    sessionId: text('session_id').notNull(),
+    questionId: text('question_id')
+      .notNull()
+      .references(() => questions.id, { onDelete: 'cascade' }),
+    quizId: text('quiz_id')
+      .notNull()
+      .references(() => quizzes.id, { onDelete: 'cascade' }),
+    guildId: text('guild_id').notNull(),
+    userId: text('user_id').notNull(),
+    isCorrect: integer('is_correct', { mode: 'boolean' }).notNull(),
+    isWinner: integer('is_winner', { mode: 'boolean' }).notNull(),
+    answeredAt: text('answered_at').notNull().default(nowIso()),
+  },
+  (table) => [
+    index('buzz_attempts_guild_user_idx').on(table.guildId, table.userId),
+    index('buzz_attempts_quiz_id_idx').on(table.quizId),
+    index('buzz_attempts_session_id_idx').on(table.sessionId),
   ],
 )
 
