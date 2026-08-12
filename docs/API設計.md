@@ -8,11 +8,19 @@
 
 ## 認証
 
-- `GET /auth/discord` — Discord OAuth2 認可フロー開始
-- `GET /auth/discord/callback` — OAuth2 コールバック、セッション発行（Cookie or JWT）
+- `GET /auth/discord` — Discord OAuth2 認可フロー開始（`identify guilds` スコープ）
+- `GET /auth/discord/callback` — OAuth2 コールバック、セッション発行。この時に `/users/@me/guilds` を取得し、**所属サーバー一覧をセッションに保存する**
 - `POST /auth/logout` — ログアウト
 
+### `GET /api/me`
+ログイン状態と、操作対象に選べるサーバー一覧を返す。未ログインは `401 UNAUTHORIZED`。
+
+- Response: `{ userId, username, guilds: { id, name }[] }`
+- `guilds` は Bot の導入有無に関わらずユーザーが所属する全サーバー。Web の画面上部のサーバー選択に使う
+
 以降のエンドポイントは原則ログイン必須。セッションから解決した `user_id` を `Actor` として `packages/core` の関数に渡す。
+
+**サーバー所属の検証（重要）:** クライアントが渡す `guild_id` / `:guildId` は、そのまま信用せず**セッションに保存した所属サーバー一覧と照合する**。所属していないサーバーIDを指定した場合は `403 FORBIDDEN` を返す（他人のサーバーになりすまして一覧・統計・出題記録を操作されるのを防ぐ）。`guild_id` を省略した呼び出しは `guildId = null` の `Actor` になり、サーバー横断の管理操作（作成者本人チェック）に用いる。
 
 ---
 
@@ -73,6 +81,19 @@
 
 公開設定そのものの変更は `PATCH /api/quizzes/:id` の `visibility` で行う（Owner のみ）。
 
+### `GET /api/quizzes/public`
+指定サーバーにまだ追加していない、追加可能な公開クイズ一覧。
+
+- Query: `guild_id`（必須。所属検証あり）, `keyword`（タイトル部分一致・任意）
+- Response: `{ id, title, description, questionCount }[]`
+- 自サーバー発のクイズと追加済みのものは除外される
+
+### `GET /api/quizzes/added`
+指定サーバーが追加済みの公開クイズ一覧。
+
+- Query: `guild_id`（必須。所属検証あり）
+- Response: `{ id, title, description, questionCount }[]`
+
 ### `POST /api/quizzes/:id/shares`
 公開クイズを指定サーバーに追加する。
 
@@ -90,17 +111,25 @@
 
 ## 共同編集者
 
-編集権限の対象は「サーバー単位（そのサーバーの全員）」と「ユーザー単位」の2種類（[要件定義.md](./要件定義.md) 2.5）。Discord側は `/quiz editors` のパネルで設定する。
+編集権限の対象は「サーバー単位（そのサーバーの全員）」と「ユーザー単位」の2種類（[要件定義.md](./要件定義.md) 2.5）。Discord側は `/quiz editors` のパネルで、Web側は「設定を指定の状態に揃える」形の一括設定エンドポイントで操作する（行ID指定ではない）。いずれも Owner のみ。
 
-### `POST /api/quizzes/:id/editors`
-編集者追加。Owner のみ。
+### `GET /api/quizzes/:id/editors`
+現在の編集権限設定を取得。
 
-- Body: `{ target_type: 'guild' | 'user', target_id }`
+- Query: `guild_id`（`guildAllowed` はこのサーバーに対する設定なので必須。所属検証あり）
+- Response: `{ guildAllowed: boolean, userIds: string[] }`
 
-### `DELETE /api/quizzes/:id/editors/:editorId`
-編集者削除。Owner のみ。
+### `PUT /api/quizzes/:id/editors/guild`
+指定サーバーの「全員編集可」設定を切り替える。
 
-> Bot側は行ID指定ではなく「設定を指定の状態に揃える」形の内部API（`setGuildEditor` / `setUserEditors`）を使う。Webからも同様の一括設定が必要になったら、対応するエンドポイントを追加する。
+- Body: `{ guild_id, allowed }`（`guild_id` は所属検証あり）
+- Response: `204 No Content`
+
+### `PUT /api/quizzes/:id/editors/users`
+ユーザー単位の編集者リストを、渡した集合に**総入れ替え**する。
+
+- Body: `{ user_ids: string[] }`
+- Response: `204 No Content`
 
 ---
 
@@ -117,7 +146,7 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 ### `POST /api/quizzes/:id/questions/:qid/attempts`
 プレビュー実行時の回答結果の記録・正誤判定（実際の出題記録は Bot 側から `packages/core` 経由で直接記録される）。
 
-- Body: `{ guild_id, user_id, submitted_answer }`
+- Body: `{ guild_id, submitted_answer }`（`user_id` はセッションから解決するため受け取らない。`guild_id` は所属検証あり）
 - Response: `{ isCorrect, correctAnswers, explanation }`
   - 正解発表のタイミングでのみ `correctAnswers` を返す
 - 制約: 同一 `(question_id, guild_id, user_id)` で**プレビュー経由の**回答が既にある場合は `409 Conflict`（1設問1回まで）。Discordの1人モードで記録された行（`session_id` 付き）は判定対象に含めないため、ソロでプレイ済みの設問でもプレビューは実行できる
@@ -154,22 +183,26 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 
 - Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）, `limit`（任意。未指定なら全件）
 - Response: `{ userId, totalAttempts, correctCount, correctRate }[]`
+- `:guildId` は所属検証あり（未所属は `403`）
 
-### `GET /api/users/:userId/stats`
-ユーザー単位の解答履歴・正答率。ログインユーザー本人のみ取得可。
+### `GET /api/guilds/:guildId/stats/buzz-ranking`
+サーバー内の**早押し**獲得数ランキング。
 
-- Query: `limit`（履歴の件数上限。既定100・最大500）
-- Response: `{ totalAttempts, correctRate, history: QuizAttempt[] }`
-- **1人モード（`quiz_attempts`）のみ**の集計で、全サーバー横断。早押しは含まない
+- Query: `quiz_id`（絞り込み任意）, `period`（`all` \| `week` \| `month`）
+- Response: `{ userId, winCount, answeredCount }[]`
+- `:guildId` は所属検証あり
 
----
+### `GET /api/guilds/:guildId/me/stats`
+ログインユーザーの、そのサーバーでの成績（1人モード＋早押し）。本人のみ・所属サーバーのみ。
 
-## 未実装（記載のみ）
-
-以下はドキュメント上の構想であり、まだ実装されていない。実装時にこの節から上へ移すこと。
-
-- `GET /api/guilds/:guildId/stats/buzz-ranking` — サーバー内の早押し獲得数ランキング。集計関数 `getBuzzRanking` は `packages/core` に存在するが、APIルートが未作成（DiscordのBot側では `/quiz ranking` で利用中）
-- `GET /api/users/:userId/stats` を `{ solo, buzz }` の形に拡張し、早押し成績も返すこと（ギルド絞り込みの扱いを決める必要がある）
+- Response:
+  ```json
+  {
+    "solo": { "totalAttempts": 42, "correctCount": 30 },
+    "buzz": { "answeredCount": 18, "winCount": 7 },
+    "topQuizzes": [ { "quizId": "...", "title": "日本史クイズ", "totalAttempts": 20, "correctCount": 14 } ]
+  }
+  ```
 
 ---
 

@@ -1,0 +1,4 @@
+# apps/api ローカル開発用シークレット（コピーして .dev.vars を作る）
+# DISCORD_CLIENT_ID / SECRET は Discord Developer Portal の OAuth2 設定から取得する
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=

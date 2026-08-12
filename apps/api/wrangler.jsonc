@@ -9,7 +9,7 @@
     {
       "binding": "DB",
       "database_name": "quiz-bot-db",
-      "database_id": "<D1_DATABASE_ID>",
+      "database_id": "655f6617-5f01-48ba-975b-2be2244d8cc1",
       "migrations_dir": "../../packages/core/migrations"
     }
   ],
