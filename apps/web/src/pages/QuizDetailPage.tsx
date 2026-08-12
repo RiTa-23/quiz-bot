@@ -1,46 +1,249 @@
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { EditorSettingsCard } from '../components/EditorSettingsCard'
+import { QuestionForm } from '../components/QuestionForm'
+import { Badge, Button, Card, ErrorNote, Spinner } from '../components/ui'
+import { useGuild } from '../lib/GuildContext'
 import { api } from '../lib/api'
-import type { QuizDetail } from '../lib/types'
+import { useApi } from '../lib/hooks'
+import type { Question, QuestionInput, QuizDetail } from '../lib/types'
+
+const TYPE_LABEL: Record<string, string> = {
+  multiple_choice: '4択',
+  true_false: '○×',
+  free_text: '自由記述',
+}
 
 export function QuizDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [quiz, setQuiz] = useState<QuizDetail | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { guildId } = useGuild()
+  const navigate = useNavigate()
+  const { data, loading, error, reload } = useApi<QuizDetail>(
+    id ? `/api/quizzes/${id}${guildId ? `?guild_id=${guildId}` : ''}` : null,
+  )
+  const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!id) return
-    api
-      .get<QuizDetail>(`/api/quizzes/${id}`)
-      .then(setQuiz)
-      .catch((e: Error) => setError(e.message))
-  }, [id])
+  if (loading) return <Spinner />
+  if (error || !data) return <ErrorNote message={error ?? 'クイズを取得できませんでした'} />
 
-  if (error) return <div className="p-6 text-red-600">読み込みに失敗しました: {error}</div>
-  if (!quiz) return <div className="p-6 text-gray-500">読み込み中...</div>
+  const canEdit = data.isOwner || data.role === 'editor'
+  const canManage = data.isOwner
 
-  const canEdit = quiz.role === 'owner' || quiz.role === 'editor'
+  const run = async (fn: () => Promise<unknown>) => {
+    setActionError(null)
+    try {
+      await fn()
+      reload()
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : '操作に失敗しました')
+    }
+  }
+
+  const addQuestion = (input: QuestionInput) =>
+    run(() => api.post(`/api/quizzes/${data.id}/questions`, input)).then(() => setAdding(false))
+  const updateQuestion = (qid: string, input: QuestionInput) =>
+    run(() => api.patch(`/api/quizzes/${data.id}/questions/${qid}`, input)).then(() =>
+      setEditingId(null),
+    )
+  const deleteQuestion = (qid: string) =>
+    run(() => api.delete(`/api/quizzes/${data.id}/questions/${qid}`))
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
-      <h1 className="mb-1 text-2xl font-semibold">{quiz.title}</h1>
-      <p className="mb-6 text-gray-500">{quiz.description}</p>
+    <div className="space-y-6">
+      <div>
+        <Link to="/quizzes" className="text-sm text-indigo-600 hover:underline">
+          ← クイズ一覧
+        </Link>
+        <div className="mt-2 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">{data.title}</h1>
+            {data.description && <p className="mt-1 text-gray-500">{data.description}</p>}
+          </div>
+          {data.visibility === 'public' && <Badge tone="indigo">公開</Badge>}
+        </div>
+      </div>
 
-      <h2 className="mb-2 text-lg font-medium">設問一覧</h2>
-      <ul className="space-y-3">
-        {quiz.questions.map((q, i) => (
-          <li key={q.id} className="rounded-md border bg-white p-4">
-            <p className="mb-1 text-sm text-gray-400">
-              #{i + 1} ({q.type})
-            </p>
-            <p className="mb-2">{q.body}</p>
-            {q.choices && <p className="text-sm text-gray-500">{q.choices.join(' / ')}</p>}
-            {canEdit && q.answers && (
-              <p className="mt-2 text-sm text-emerald-600">正解: {q.answers.join(' / ')}</p>
-            )}
-          </li>
-        ))}
-      </ul>
+      {actionError && <ErrorNote message={actionError} />}
+
+      {canManage && (
+        <QuizMetaCard quiz={data} onSaved={reload} onDeleted={() => navigate('/quizzes')} />
+      )}
+
+      {/* 設問 */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">設問（{data.questions.length}）</h2>
+          {canEdit && !adding && <Button onClick={() => setAdding(true)}>＋ 設問を追加</Button>}
+        </div>
+
+        {adding && (
+          <Card>
+            <QuestionForm onSubmit={addQuestion} onCancel={() => setAdding(false)} />
+          </Card>
+        )}
+
+        {data.questions.length === 0 && !adding && (
+          <p className="text-sm text-gray-500">まだ設問がありません。</p>
+        )}
+
+        <ul className="space-y-3">
+          {data.questions.map((q, i) =>
+            editingId === q.id ? (
+              <Card key={q.id}>
+                <QuestionForm
+                  initial={q}
+                  onSubmit={(input) => updateQuestion(q.id, input)}
+                  onCancel={() => setEditingId(null)}
+                />
+              </Card>
+            ) : (
+              <QuestionRow
+                key={q.id}
+                index={i}
+                question={q}
+                canEdit={canEdit}
+                onEdit={() => setEditingId(q.id)}
+                onDelete={() => deleteQuestion(q.id)}
+              />
+            ),
+          )}
+        </ul>
+      </section>
+
+      {canManage && guildId && <EditorSettingsCard quizId={data.id} guildId={guildId} />}
     </div>
+  )
+}
+
+function QuestionRow({
+  index,
+  question,
+  canEdit,
+  onEdit,
+  onDelete,
+}: {
+  index: number
+  question: Question
+  canEdit: boolean
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="mb-1 text-xs text-gray-400">
+            #{index + 1} ・ {TYPE_LABEL[question.type]}
+          </p>
+          <p className="text-gray-900">{question.body}</p>
+          {question.choices && (
+            <p className="mt-1 text-sm text-gray-500">{question.choices.join(' / ')}</p>
+          )}
+          {question.answers && (
+            <p className="mt-1 text-sm text-emerald-600">正解: {question.answers.join(' / ')}</p>
+          )}
+          {question.explanation && (
+            <p className="mt-1 text-sm text-gray-500">解説: {question.explanation}</p>
+          )}
+        </div>
+        {canEdit && (
+          <div className="flex shrink-0 gap-1">
+            <Button variant="ghost" onClick={onEdit}>
+              編集
+            </Button>
+            <Button variant="ghost" className="text-red-600 hover:bg-red-50" onClick={onDelete}>
+              削除
+            </Button>
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+function QuizMetaCard({
+  quiz,
+  onSaved,
+  onDeleted,
+}: {
+  quiz: QuizDetail
+  onSaved: () => void
+  onDeleted: () => void
+}) {
+  const [title, setTitle] = useState(quiz.title)
+  const [description, setDescription] = useState(quiz.description ?? '')
+  const [visibility, setVisibility] = useState(quiz.visibility)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const save = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await api.patch(`/api/quizzes/${quiz.id}`, {
+        title: title.trim(),
+        description: description.trim() || null,
+        visibility,
+      })
+      onSaved()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '保存に失敗しました')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async () => {
+    if (!confirm(`「${quiz.title}」を削除します。設問・回答記録もすべて消え、元に戻せません。`))
+      return
+    setBusy(true)
+    try {
+      await api.delete(`/api/quizzes/${quiz.id}`)
+      onDeleted()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '削除に失敗しました')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card className="space-y-3">
+      <h2 className="text-lg font-medium">クイズ設定</h2>
+      <label className="block space-y-1">
+        <span className="text-sm font-medium text-gray-700">タイトル</span>
+        <input
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </label>
+      <label className="block space-y-1">
+        <span className="text-sm font-medium text-gray-700">説明</span>
+        <textarea
+          className="min-h-16 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={visibility === 'public'}
+          onChange={(e) => setVisibility(e.target.checked ? 'public' : 'private')}
+        />
+        公開する（他のサーバーが追加して使えるようにする）
+      </label>
+      {error && <ErrorNote message={error} />}
+      <div className="flex justify-between">
+        <Button variant="danger" onClick={remove} disabled={busy}>
+          クイズを削除
+        </Button>
+        <Button onClick={save} disabled={busy || !title.trim()}>
+          保存
+        </Button>
+      </div>
+    </Card>
   )
 }

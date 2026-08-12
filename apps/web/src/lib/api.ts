@@ -26,13 +26,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return json as T
 }
 
+const withBody = (method: string) => (path: string, body?: unknown) =>
+  request(path, { method, body: body === undefined ? undefined : JSON.stringify(body) })
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  post: <T>(path: string, body?: unknown) => withBody('POST')(path, body) as Promise<T>,
+  patch: <T>(path: string, body?: unknown) => withBody('PATCH')(path, body) as Promise<T>,
+  put: <T>(path: string, body?: unknown) => withBody('PUT')(path, body) as Promise<T>,
+  delete: <T>(path: string, body?: unknown) => withBody('DELETE')(path, body) as Promise<T>,
 }
 
 export const loginUrl = () => `${API_ORIGIN}/auth/discord`
+export const logout = () => api.post('/auth/logout')
