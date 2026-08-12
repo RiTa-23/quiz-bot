@@ -121,7 +121,7 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 - Response: `{ isCorrect, correctAnswers, explanation }`
   - 正解発表のタイミングでのみ `correctAnswers` を返す
 - 制約: 同一 `(question_id, guild_id, user_id)` で**プレビュー経由の**回答が既にある場合は `409 Conflict`（1設問1回まで）。Discordの1人モードで記録された行（`session_id` 付き）は判定対象に含めないため、ソロでプレイ済みの設問でもプレビューは実行できる
-- レート制限: 同一 `user_id` からの短時間連投は `429 Too Many Requests`
+- レート制限: `(guild_id, user_id)` 単位で **5秒に3回**まで。4回目は `429 Too Many Requests`（`RATE_LIMITED`）を返す
 
 ---
 
