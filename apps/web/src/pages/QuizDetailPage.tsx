@@ -137,7 +137,7 @@ export function QuizDetailPage() {
 
 /** Discordで引けなかったユーザーはIDのままにする（退会済みなどで解決できないことがある） */
 function AuthorLabel({ author, authorId }: { author?: Author; authorId: string }) {
-  if (!author) return <span title={authorId}>作成者: 不明</span>
+  if (!author) return <span title={`ユーザーID: ${authorId}`}>作成者: 不明（ID: {authorId}）</span>
   return (
     <span className="inline-flex items-center gap-1 align-middle">
       {author.avatarUrl && (
