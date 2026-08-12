@@ -1,4 +1,7 @@
-const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? 'http://localhost:8788'
+export const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? 'http://localhost:8788'
+
+/** 公開クイズの共有ページ（認証不要・OGP付き）。 */
+export const shareUrl = (quizId: string) => `${API_ORIGIN}/q/${quizId}`
 
 export type ApiError = { code: string; message: string }
 

@@ -31,6 +31,7 @@ meRoutes.get('/me', async (c) => {
   return c.json({
     userId: session.userId,
     username: session.username,
+    displayName: session.displayName || session.username,
     guilds,
     botInstallUrl: buildBotInstallUrl(c.env.DISCORD_CLIENT_ID),
   })

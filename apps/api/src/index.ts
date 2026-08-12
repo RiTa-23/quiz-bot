@@ -5,6 +5,7 @@ import type { Bindings, Variables } from './env'
 import { meRoutes } from './routes/me'
 import { ogRoutes } from './routes/og'
 import { quizzesRoutes } from './routes/quizzes'
+import { shareRoutes } from './routes/share'
 import { statsRoutes } from './routes/stats'
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -14,8 +15,9 @@ app.use('*', async (c, next) => {
   return middleware(c, next)
 })
 
-// OGPはクローラーが認証なしで取得するため、CORS・認証の対象外に置く
+// OGPと共有ページはクローラーが認証なしで取得するため、CORS・認証の対象外に置く
 app.route('/og', ogRoutes)
+app.route('/q', shareRoutes)
 app.route('/auth', authRoutes)
 app.route('/api', meRoutes)
 app.route('/api/quizzes', quizzesRoutes)

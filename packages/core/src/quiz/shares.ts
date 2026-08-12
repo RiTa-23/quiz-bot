@@ -154,3 +154,51 @@ export async function removeAddedQuiz(
 export async function listShares(db: Database, quizId: string): Promise<QuizShare[]> {
   return db.select().from(quizShares).where(eq(quizShares.quizId, quizId))
 }
+
+export type PublicQuizSummary = {
+  id: string
+  title: string
+  description: string | null
+  ownerUserId: string
+  questionCount: number
+  questionTypes: { multipleChoice: number; trueFalse: number; freeText: number }
+  createdAt: string
+}
+
+/**
+ * 共有リンク用に、公開クイズの概要を**認証なし**で取得する。
+ * 誰でも見られる経路のため、`visibility = 'public'` のクイズだけを返し、
+ * 設問本文・正解は一切含めない（[docs/API設計.md](../../../../docs/API設計.md) の正解非公開ルール）。
+ */
+export async function getPublicQuizSummary(
+  db: Database,
+  quizId: string,
+): Promise<PublicQuizSummary | null> {
+  const [quiz] = await db
+    .select({
+      id: quizzes.id,
+      title: quizzes.title,
+      description: quizzes.description,
+      ownerUserId: quizzes.ownerUserId,
+      createdAt: quizzes.createdAt,
+    })
+    .from(quizzes)
+    .where(and(eq(quizzes.id, quizId), eq(quizzes.visibility, 'public')))
+    .limit(1)
+  if (!quiz) return null
+
+  const rows = await db
+    .select({ type: questions.type })
+    .from(questions)
+    .where(eq(questions.quizId, quizId))
+
+  return {
+    ...quiz,
+    questionCount: rows.length,
+    questionTypes: {
+      multipleChoice: rows.filter((q) => q.type === 'multiple_choice').length,
+      trueFalse: rows.filter((q) => q.type === 'true_false').length,
+      freeText: rows.filter((q) => q.type === 'free_text').length,
+    },
+  }
+}

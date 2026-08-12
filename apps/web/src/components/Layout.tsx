@@ -61,7 +61,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 ))}
               </Select>
             ) : null}
-            <span className="text-sm text-navy-200">{me.username}</span>
+            <span className="text-sm text-navy-200">{me.displayName || me.username}</span>
             <button
               type="button"
               onClick={onLogout}

@@ -10,6 +10,8 @@ export { deleteQuiz } from './quiz/deleteQuiz'
 export { addQuestion, updateQuestion, deleteQuestion } from './quiz/questions'
 export type { AddQuestionInput, UpdateQuestionInput } from './quiz/questions'
 export {
+  getPublicQuizSummary,
+  type PublicQuizSummary,
   listPublicQuizzes,
   listAddedQuizzes,
   addPublicQuiz,

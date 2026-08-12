@@ -84,7 +84,7 @@ function Rankings({ guildId }: { guildId: string }) {
             solo.data?.map((e, i) => (
               <li key={e.userId} className="flex justify-between">
                 <span>
-                  {i + 1}. <UserTag id={e.userId} />
+                  {i + 1}. <UserTag id={e.userId} name={e.displayName} />
                 </span>
                 <span className="text-navy-300">
                   {e.correctCount}正解（{pct(e.correctCount, e.totalAttempts)}）
@@ -106,7 +106,7 @@ function Rankings({ guildId }: { guildId: string }) {
             buzz.data?.map((e, i) => (
               <li key={e.userId} className="flex justify-between">
                 <span>
-                  {i + 1}. <UserTag id={e.userId} />
+                  {i + 1}. <UserTag id={e.userId} name={e.displayName} />
                 </span>
                 <span className="text-navy-300">
                   {e.winCount}獲得 / {e.answeredCount}回答
@@ -171,7 +171,21 @@ function PerQuizStats({ guildId }: { guildId: string }) {
   )
 }
 
-/** Web側にはユーザー名の解決手段が無いためIDの先頭のみ表示する。 */
-function UserTag({ id }: { id: string }) {
-  return <span className="font-mono text-xs text-navy-300">{id.slice(0, 8)}…</span>
+/**
+ * ユーザー表示はDiscordの表示名に統一する。
+ * 退会などで名前を引けなかった場合だけ、識別できるようIDを出す。
+ */
+function UserTag({ id, name }: { id: string; name: string | null }) {
+  if (!name) {
+    return (
+      <span className="font-mono text-xs text-navy-200" title={id}>
+        不明なユーザー
+      </span>
+    )
+  }
+  return (
+    <span className="font-medium text-navy-900" title={id}>
+      {name}
+    </span>
+  )
 }

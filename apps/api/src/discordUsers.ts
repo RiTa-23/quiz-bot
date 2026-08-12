@@ -106,3 +106,19 @@ export async function fetchUserSummaries(
   }
   return map
 }
+
+/**
+ * ランキングなど userId を持つ行に表示名を添える。
+ * Web側にユーザー名の解決手段が無く、IDのまま出すと誰の記録か分からないため。
+ * 引けなかったユーザーは `null` にして、表示側でフォールバックさせる。
+ */
+export async function withDisplayNames<T extends { userId: string }>(
+  env: Bindings,
+  rows: T[],
+): Promise<(T & { displayName: string | null })[]> {
+  const users = await fetchUserSummaries(
+    env,
+    rows.map((r) => r.userId),
+  )
+  return rows.map((row) => ({ ...row, displayName: users[row.userId]?.displayName ?? null }))
+}

@@ -7,6 +7,7 @@ import {
 } from '@quiz-bot/core'
 import { Hono } from 'hono'
 import { actorForGuild } from '../actor'
+import { withDisplayNames } from '../discordUsers'
 import type { Bindings, Variables } from '../env'
 import { handleApiError } from '../errorHandler'
 import { requireAuth } from '../middleware/requireAuth'
@@ -47,7 +48,7 @@ statsRoutes.get('/guilds/:guildId/stats/ranking', async (c) => {
       period: parsePeriod(c.req.query('period')),
       limit: parseLimit(c.req.query('limit')),
     })
-    return c.json(ranking)
+    return c.json(await withDisplayNames(c.env, ranking))
   } catch (error) {
     return handleApiError(c, error)
   }
@@ -63,7 +64,7 @@ statsRoutes.get('/guilds/:guildId/stats/buzz-ranking', async (c) => {
       period: parsePeriod(c.req.query('period')),
       limit: parseLimit(c.req.query('limit')),
     })
-    return c.json(ranking)
+    return c.json(await withDisplayNames(c.env, ranking))
   } catch (error) {
     return handleApiError(c, error)
   }
