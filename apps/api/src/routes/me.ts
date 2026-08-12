@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { getCookie } from 'hono/cookie'
 import { SESSION_COOKIE, resolveSession } from '../auth'
 import { fetchBotGuildIds } from '../botGuilds'
+import { fetchUserSummaries } from '../discordUsers'
 import type { Bindings, Variables } from '../env'
 
 export const meRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -24,6 +25,14 @@ meRoutes.get('/me', async (c) => {
     return c.json({ error: { code: 'UNAUTHORIZED', message: 'ログインが必要です' } }, 401)
   }
 
+  // セッション作成前の実装では displayName を保存していないため、
+  // 無い場合はここでDiscordから解決する（再ログインを強いないため）。
+  let displayName = session.displayName
+  if (!displayName) {
+    const users = await fetchUserSummaries(c.env, [session.userId])
+    displayName = users[session.userId]?.displayName
+  }
+
   const forceRefresh = c.req.query('refresh') === '1'
   const botGuildIds = await fetchBotGuildIds(c.env, { forceRefresh })
   const guilds = botGuildIds ? session.guilds.filter((g) => botGuildIds.has(g.id)) : session.guilds
@@ -31,7 +40,7 @@ meRoutes.get('/me', async (c) => {
   return c.json({
     userId: session.userId,
     username: session.username,
-    displayName: session.displayName || session.username,
+    displayName: displayName || session.username,
     guilds,
     botInstallUrl: buildBotInstallUrl(c.env.DISCORD_CLIENT_ID),
   })

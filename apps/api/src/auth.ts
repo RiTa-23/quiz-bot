@@ -122,7 +122,8 @@ authRoutes.post('/logout', async (c) => {
 export type Session = {
   userId: string
   username: string
-  displayName: string
+  /** この変更より前に作られたセッションには入っていないため optional。 */
+  displayName?: string
   guilds: SessionGuild[]
 }
 
@@ -139,11 +140,12 @@ export async function resolveSession(
     await env.SESSIONS.delete(`session:${sessionId}`)
     return null
   }
-  // 旧セッションには displayName が無いため username にフォールバックする
+  // displayName は旧セッションには無い。ここでは埋めず、呼び出し側でDiscordから解決させる
+  // （username で代用すると、他のユーザーの表示だけが表示名になり画面内で食い違うため）
   return {
     userId: s.userId,
     username: s.username ?? '',
-    displayName: s.displayName ?? s.username ?? '',
+    ...(s.displayName ? { displayName: s.displayName } : {}),
     guilds: s.guilds,
   }
 }
