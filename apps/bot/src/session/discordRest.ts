@@ -10,12 +10,18 @@ export async function editChannelMessage(
   messageId: string,
   payload: { content: string; components: unknown[] },
 ): Promise<void> {
-  await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bot ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payload),
+    // 早押しの結果には <@id> が並ぶため、通知が飛ばないようメンションを解決させない
+    body: JSON.stringify({ ...payload, allowed_mentions: { parse: [] } }),
   })
+
+  // 失敗を握りつぶすとセッションだけ進んでDiscordの表示が取り残されるため、呼び出し側へ伝える
+  if (!res.ok) {
+    throw new Error(`Discord message edit failed: ${res.status} ${await res.text()}`)
+  }
 }

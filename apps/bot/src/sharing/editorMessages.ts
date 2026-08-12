@@ -45,17 +45,16 @@ export function buildEditorPanel(
     )
 
     // 全員に許可しているときは個別指定を出さない（不要なため）
-    if (!settings.guildAllowed) {
+    // 上限を超えている場合もセレクトを出さない。表示しきれない人が選択から漏れ、
+    // 「選んだ集合に揃える」動作によって黙って権限を失うため
+    if (!settings.guildAllowed && settings.userIds.length <= MAX_USERS) {
       components.row(
         new Select(ED_USER_SELECT, 'User')
           .custom_id(selected.id)
           .min_values(0)
           .max_values(MAX_USERS)
           .placeholder('編集を許可するユーザーを検索・選択（複数可）')
-          // 初期選択が max_values を超えるとDiscord側で弾かれるため上限で切る
-          .default_values(
-            ...settings.userIds.slice(0, MAX_USERS).map((id) => ({ id, type: 'user' as const })),
-          ),
+          .default_values(...settings.userIds.map((id) => ({ id, type: 'user' as const }))),
       )
     }
   }
@@ -75,7 +74,15 @@ export function buildEditorPanel(
           ? `個別に許可中: ${settings.userIds.map((id) => `<@${id}>`).join(' ')}`
           : '個別に許可しているユーザーはいません。',
       )
-      lines.push('下のメニューで選び直すと、その内容に置き換わります（選択を空にすると全員解除）。')
+      if (settings && settings.userIds.length > MAX_USERS) {
+        lines.push(
+          `⚠️ 個別許可が${MAX_USERS}人を超えているため、ここでは編集できません（誤って権限を失わないようメニューを表示していません）。`,
+        )
+      } else {
+        lines.push(
+          '下のメニューで選び直すと、その内容に置き換わります（選択を空にすると全員解除）。',
+        )
+      }
     }
   }
 

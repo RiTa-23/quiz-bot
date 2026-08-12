@@ -1,6 +1,7 @@
 import { DurableObject } from 'cloudflare:workers'
 import {
   type Actor,
+  AppError,
   type BuzzAttemptRecord,
   type Question,
   type SoloAttemptRecord,
@@ -202,8 +203,17 @@ export class QuizSession extends DurableObject<Bindings> {
     if (!s || !s.quizId) return { ok: false, reason: 'no-quiz' }
 
     const db = createDb(this.env.DB)
-    const all = await getSessionQuestions(db, this.actor(), s.quizId)
-    if (all.length === 0) return { ok: false, reason: 'no-questions' }
+    // getSessionQuestions は設問0件のとき notFound を投げるので、それだけを
+    // 「設問なし」として扱う。D1障害などは握りつぶさず呼び出し側へ伝える。
+    let all: Question[]
+    try {
+      all = await getSessionQuestions(db, this.actor(), s.quizId)
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'NOT_FOUND') {
+        return { ok: false, reason: 'no-questions' }
+      }
+      throw error
+    }
 
     const picked = shuffle(all).slice(0, Math.min(s.count, all.length)).map(toSessionQuestion)
     s.questions = picked

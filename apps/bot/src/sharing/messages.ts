@@ -13,6 +13,8 @@ export const VIS_PRIVATE = 'vsl' // サーバー限定にする（custom_id data
 
 export const KEYWORD_INPUT = 'keyword'
 const LIST_LIMIT = 25
+/** custom_id（100文字上限）に収めるための検索語の上限 */
+const KEYWORD_MAX = 90
 
 export type OwnedQuiz = { id: string; title: string; visibility: 'private' | 'public' }
 
@@ -82,8 +84,9 @@ export function buildPublicPanel(
     )
   }
 
+  // custom_id はハンドラキーと区切りを含めて100文字までのため、検索語を切り詰めて収める
   const searchButton = new Button(PUB_SEARCH_OPEN, '🔍 タイトルで検索', 'Primary').custom_id(
-    keyword,
+    keyword.slice(0, KEYWORD_MAX),
   )
   if (keyword) {
     components.row(searchButton, new Button(PUB_CLEAR, '検索条件をクリア', 'Secondary'))
@@ -107,10 +110,10 @@ export function buildPublicPanel(
 
 /** タイトル検索モーダル。 */
 export function buildSearchModal(current: string): Modal {
-  const input = new TextInput(KEYWORD_INPUT, 'クイズのタイトル（一部でも可）', 'Single').required(
-    false,
-  )
-  if (current) input.value(current)
+  const input = new TextInput(KEYWORD_INPUT, 'クイズのタイトル（一部でも可）', 'Single')
+    .required(false)
+    .max_length(KEYWORD_MAX)
+  if (current) input.value(current.slice(0, KEYWORD_MAX))
   return new Modal(PUB_SEARCH_MODAL, '公開クイズを検索').row(input)
 }
 

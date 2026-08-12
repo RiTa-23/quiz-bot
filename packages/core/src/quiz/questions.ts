@@ -19,6 +19,14 @@ function validateQuestionInput(input: AddQuestionInput | UpdateQuestionInput, ty
     if (!input.choices || input.choices.length < 2) {
       throw validationError('4択の設問には2つ以上の選択肢が必要です')
     }
+    // 選択肢に無い正解を登録すると、回答は選択肢の値で送られるため永久に正解できない設問になる
+    if (input.answers !== undefined) {
+      const choices = input.choices
+      const invalid = input.answers.filter((a) => !choices.includes(a))
+      if (invalid.length > 0) {
+        throw validationError(`正解は選択肢の中から指定してください: ${invalid.join(' / ')}`)
+      }
+    }
   }
   if (input.answers !== undefined && input.answers.length === 0) {
     throw validationError('正解パターンは1つ以上指定してください')

@@ -79,6 +79,9 @@ export async function removeEditor(
   await db.delete(quizEditors).where(eq(quizEditors.id, editorId))
 }
 
+/** Discordのユーザーセレクトが一度に扱える上限。UI側の MAX_USERS と揃える */
+const MAX_USER_EDITORS = 25
+
 export type EditorSettings = {
   /** このサーバーの全員に編集を許可しているか */
   guildAllowed: boolean
@@ -160,6 +163,9 @@ export async function setUserEditors(
   const quiz = await getQuizOrThrow(db, quizId)
   assertIsOwnerUser(actor, quiz)
 
+  if (userIds.length > MAX_USER_EDITORS) {
+    throw validationError(`個別に指定できるのは${MAX_USER_EDITORS}人までです`)
+  }
   const desired = [...new Set(userIds)].filter((id) => id !== actor.userId)
   const current = (
     await db

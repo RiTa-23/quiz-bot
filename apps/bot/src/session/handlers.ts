@@ -136,7 +136,12 @@ export async function handleSessionAnswer(c: ComponentContext<{ Bindings: Bindin
 
   const messageId = c.interaction.message.id
   const rendered = renderAdvance(outcome, messageId)
-  return c.resUpdate({ content: rendered.content, components: rendered.components ?? [] })
+  return c.resUpdate({
+    content: rendered.content,
+    components: rendered.components ?? [],
+    // 勝者や順位に <@id> が入るため、通知が飛ばないようにする
+    allowed_mentions: { parse: [] },
+  })
 }
 
 /** 自由記述: モーダルを開く。 */

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { questions } from '../db/schema'
 import type { Actor, PublicQuestion, Question, Quiz } from '../types'
-import { assertCanViewQuiz, getQuizOrThrow, resolveQuizRole } from './permissions'
+import { assertCanViewQuiz, getQuizOrThrow, isOwnerUser, resolveQuizRole } from './permissions'
 
 function toQuestion(row: typeof questions.$inferSelect): Question {
   return {
@@ -43,7 +43,9 @@ export async function getQuiz(db: Database, actor: Actor, quizId: string): Promi
     .orderBy(questions.sortOrder)
 
   const parsed = rows.map(toQuestion)
-  const canSeeAnswers = role === 'owner' || role === 'editor'
+  // 作成者はサーバーに依存せず正解を見られる（Web APIは guild_id を伴わない呼び出しがあり、
+  // その場合 role は 'none' になるため、ロールだけで判定すると自分のクイズの正解が隠れてしまう）
+  const canSeeAnswers = isOwnerUser(actor, quiz) || role === 'owner' || role === 'editor'
 
   return {
     ...quiz,

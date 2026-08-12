@@ -47,6 +47,19 @@ function countOptions(max: number): number[] {
 export function buildConfigPanel(view: DraftView): { content: string; components: Components } {
   const components = new Components()
 
+  // Discordのセレクトは選択肢0件を受け付けないため、出題できるクイズが無いときは
+  // コンポーネントを一切付けずに案内文だけ返す
+  if (view.quizzes.length === 0) {
+    return {
+      content: [
+        '**クイズ設定**',
+        'このサーバーで出題できるクイズがありません。',
+        '`/quiz create` で作成するか、`/quiz add-public` で公開クイズを追加してください。',
+      ].join('\n'),
+      components,
+    }
+  }
+
   const select = new Select(CFG_QUIZ_SELECT, 'String').options(
     ...view.quizzes.map((q) => ({
       label: q.title.slice(0, 100),
