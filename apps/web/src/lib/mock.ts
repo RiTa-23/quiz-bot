@@ -266,6 +266,33 @@ const QUIZ_STATS: Record<string, QuizStats> = {
       },
     ],
   },
+  q2: {
+    quizId: 'q2',
+    title: 'アニメ○×クイズ',
+    totalAttempts: 0,
+    correctCount: 0,
+    correctRate: 0,
+    uniqueUserCount: 0,
+    questions: [],
+  },
+  q3: {
+    quizId: 'q3',
+    title: '英単語クイズ（共有）',
+    totalAttempts: 14,
+    correctCount: 11,
+    correctRate: 0.786,
+    uniqueUserCount: 5,
+    questions: [
+      {
+        questionId: 'qq9',
+        body: '"apple" の意味は？',
+        sortOrder: 0,
+        totalAttempts: 14,
+        correctCount: 11,
+        correctRate: 0.786,
+      },
+    ],
+  },
 }
 
 const EDITORS: EditorSettings = {
@@ -283,13 +310,11 @@ function route(
   const seg = pathname.split('/').filter(Boolean)
   const at = (i: number) => seg[i]
 
-  // 認証・共通
   if (pathname === '/api/me') return ME
   if (pathname === '/api/bot-install-url') return { botInstallUrl: ME.botInstallUrl }
   if (pathname === '/auth/logout') return {}
 
   if (at(0) === 'api' && at(1) === 'guilds') {
-    // /api/guilds/:gid/me/stats, /stats/ranking, /stats/buzz-ranking
     if (at(3) === 'me' && at(4) === 'stats') return MEMBER_STATS
     if (at(3) === 'stats' && at(4) === 'ranking') return SOLO_RANKING
     if (at(3) === 'stats' && at(4) === 'buzz-ranking') return BUZZ_RANKING
@@ -298,9 +323,9 @@ function route(
   if (at(0) === 'api' && at(1) === 'quizzes') {
     const third = at(2)
 
-    // コレクション系（:idより先に判定する）
+    // コレクション系は :id より先に判定する（でないと public / added が :id に食われる）
     if (third === undefined) {
-      if (method === 'POST') return {} // 作成
+      if (method === 'POST') return {}
       return QUIZZES
     }
     if (third === 'public') {
@@ -310,20 +335,19 @@ function route(
     }
     if (third === 'added') return PUBLIC_ADDED
 
-    // 個別クイズ /api/quizzes/:id/...
     const id = third
     const sub = at(3)
     if (sub === undefined) {
       if (method === 'GET') return DETAILS[id] ?? NOT_FOUND
-      return {} // PATCH / DELETE
+      return {}
     }
-    if (sub === 'stats') return QUIZ_STATS[id] ?? QUIZ_STATS.q1
+    if (sub === 'stats') return QUIZ_STATS[id] ?? NOT_FOUND
     if (sub === 'editors') {
       if (method === 'GET') return EDITORS
-      return {} // PUT（guild / users）
+      return {}
     }
-    if (sub === 'questions') return {} // POST / PATCH / DELETE
-    if (sub === 'shares') return {} // POST / DELETE
+    if (sub === 'questions') return {}
+    if (sub === 'shares') return {}
   }
 
   return NOT_FOUND

@@ -41,7 +41,7 @@ export function MyQuizzesPage() {
             <li key={q.id}>
               <Link
                 to={`/quizzes/${q.id}`}
-                className="group flex items-center gap-3 p-4 transition hover:bg-paper focus-visible:bg-paper"
+                className="group flex items-center gap-3 p-4 transition hover:bg-paper focus-visible:bg-paper focus-visible:ring-inset focus-visible:ring-offset-0"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-navy-900">{q.title}</p>

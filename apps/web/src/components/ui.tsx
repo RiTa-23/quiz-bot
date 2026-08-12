@@ -38,13 +38,13 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
 
 export function Spinner({ label = '読み込み中…' }: { label?: string }) {
   return (
-    <div className="flex items-center gap-2 p-6 text-sm text-navy-300">
+    <output className="flex items-center gap-2 p-6 text-sm text-navy-300">
       <span
         aria-hidden
         className="h-4 w-4 animate-spin rounded-full border-2 border-paper-line border-t-gold-400"
       />
       <span>{label}</span>
-    </div>
+    </output>
   )
 }
 
