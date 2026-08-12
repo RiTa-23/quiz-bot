@@ -17,7 +17,9 @@ export const SESSION_FT_OPEN = 'sfo' // セッション: 自由記述モーダ�
 export const SESSION_FT_MODAL = 'sfm' // セッション: 自由記述モーダル送信（data = questionId:messageId）
 export const FT_INPUT = 'answer'
 
-const TRUE_FALSE_LABELS = ['⭕ ○', '❌ ×']
+// 絵文字だけにする（「⭕ ○」のように絵文字とテキストが重複して見えるため）。
+// 回答の判定値は QuizSession の TRUE_FALSE_CHOICES 側で持つのでラベルは表示専用。
+const TRUE_FALSE_LABELS = ['⭕', '❌']
 
 // 参加者1人あたり約25文字（`・<@snowflake>`）。人数が増えてもメッセージの
 // 2000文字上限を超えないよう、一覧の表示件数だけを打ち切る（人数表示は全数）。
