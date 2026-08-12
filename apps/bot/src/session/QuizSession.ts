@@ -202,11 +202,19 @@ export class QuizSession extends DurableObject<Bindings> {
     await this.ctx.storage.deleteAlarm()
   }
 
-  /** 設定GUIを操作できるのはホストだけ。 */
-  private guardHost(userId: string): { ok: false; reason: 'not-host' | 'no-session' } | null {
+  /**
+   * 設定GUIを操作できるのはホストだけ。
+   * 併せて想定外の状態からの操作も弾く。開始済みのセッションに対して
+   * 古いパネルの連打やダブルクリックが届くと、設問とスコアが作り直されるため。
+   */
+  private guardHost(
+    userId: string,
+    allowed: State['status'][] = ['draft'],
+  ): { ok: false; reason: 'not-host' | 'no-session' } | null {
     const s = this.state
     if (!s) return { ok: false, reason: 'no-session' }
     if (s.hostUserId !== userId) return { ok: false, reason: 'not-host' }
+    if (!allowed.includes(s.status)) return { ok: false, reason: 'no-session' }
     return null
   }
 
@@ -271,7 +279,7 @@ export class QuizSession extends DurableObject<Bindings> {
 
   /** 早押しの募集開始（ホストのみ）。ホストは自動で参加者に入る。 */
   async openLobby(userId: string, messageId: string): Promise<LobbyResult> {
-    const denied = this.guardHost(userId)
+    const denied = this.guardHost(userId, ['draft'])
     if (denied) return denied
     const s = this.state as State
     if (!s.quizId) return { ok: false, reason: 'no-quiz' }
@@ -298,10 +306,12 @@ export class QuizSession extends DurableObject<Bindings> {
 
   /** Play押下時: 設問を確定してセッションを開始する。 */
   async start(userId: string, messageId: string): Promise<StartResult> {
-    const denied = this.guardHost(userId)
+    const denied = this.guardHost(userId, ['draft', 'lobby'])
     if (denied) return denied
     const s = this.state as State
     if (!s.quizId) return { ok: false, reason: 'no-quiz' }
+    // 早押しは募集を経由した場合のみ開始できる（1人モードはドラフトから直接）
+    if (s.mode === 'buzz' && s.status !== 'lobby') return { ok: false, reason: 'no-session' }
     if (s.mode === 'buzz' && (s.participants?.length ?? 0) < 2) {
       return { ok: false, reason: 'not-enough-players' }
     }
@@ -485,14 +495,17 @@ export class QuizSession extends DurableObject<Bindings> {
   /** 募集の期限切れ。セッションを畳んでチャンネルを解放する。 */
   private async expireLobby(): Promise<void> {
     const s = this.state as State
+    // 先にパネルを畳んでから finished にする。編集が失敗したら例外のまま alarm の
+    // リトライに委ね、参加ボタンが残ったまま募集だけ終了した状態を避ける。
+    if (s.messageId) {
+      await editChannelMessage(this.env.DISCORD_TOKEN, s.channelId, s.messageId, {
+        content:
+          '⏰ 参加者が集まらなかったため募集を終了しました。もう一度 `/quiz play` から始めてください。',
+        components: [],
+      })
+    }
     s.status = 'finished'
     await this.save()
-    if (!s.messageId) return
-    await editChannelMessage(this.env.DISCORD_TOKEN, s.channelId, s.messageId, {
-      content:
-        '⏰ 参加者が集まらなかったため募集を終了しました。もう一度 `/quiz play` から始めてください。',
-      components: [],
-    })
   }
 
   /** 早押しの制限時間切れ。正解者なしで締め切り、次の問題を投稿する。 */

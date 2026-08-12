@@ -18,6 +18,10 @@ export const FT_INPUT = 'answer'
 
 const TRUE_FALSE_LABELS = ['⭕ ○', '❌ ×']
 
+// 参加者1人あたり約25文字（`・<@snowflake>`）。人数が増えてもメッセージの
+// 2000文字上限を超えないよう、一覧の表示件数だけを打ち切る（人数表示は全数）。
+const LOBBY_LIST_LIMIT = 40
+
 function modeLabel(mode: DraftView['mode']): string {
   return mode === 'solo' ? '1人' : 'みんなで早押し'
 }
@@ -130,8 +134,12 @@ export function buildLobbyPanel(view: LobbyView): { content: string; components:
     '',
     `**参加者（${view.participants.length}人）**`,
     view.participants
+      .slice(0, LOBBY_LIST_LIMIT)
       .map((id) => `・<@${id}>${id === view.hostUserId ? '（ホスト）' : ''}`)
       .join('\n'),
+    ...(view.participants.length > LOBBY_LIST_LIMIT
+      ? [`ほか${view.participants.length - LOBBY_LIST_LIMIT}人`]
+      : []),
     '',
     view.canStart
       ? 'ホストが **Play** を押すと開始します。'

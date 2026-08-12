@@ -106,7 +106,10 @@ export async function handleCountSelect(c: ComponentContext<{ Bindings: Bindings
   return respondControl(c, await stub.setCount(actor.userId, Number.parseInt(value, 10)))
 }
 
-const START_FAIL_MESSAGE: Record<string, string> = {
+type StartFailReason = Extract<StartResult, { ok: false }>['reason']
+type LobbyFailReason = Extract<LobbyResult, { ok: false }>['reason']
+
+const START_FAIL_MESSAGE: Record<Exclude<StartFailReason, 'not-host' | 'no-session'>, string> = {
   'no-quiz': 'クイズを選択してください。',
   'no-questions': '設問がありません。',
   'not-enough-players': 'ホストを含めて2人以上必要です。',
@@ -122,7 +125,7 @@ function respondStart(
     if (result.reason === 'not-host' || result.reason === 'no-session') {
       return c.ephemeral().res(DENIED_MESSAGE[result.reason])
     }
-    return c.ephemeral().res(START_FAIL_MESSAGE[result.reason] ?? 'エラー')
+    return c.ephemeral().res(START_FAIL_MESSAGE[result.reason])
   }
   const step: Extract<NextStep, { done: false }> = {
     done: false,
@@ -133,7 +136,7 @@ function respondStart(
   return c.resUpdate(buildSessionQuestion(step, messageId))
 }
 
-const LOBBY_DENIED_MESSAGE: Record<string, string> = {
+const LOBBY_DENIED_MESSAGE: Record<LobbyFailReason, string> = {
   'not-host': DENIED_MESSAGE['not-host'],
   'no-session': DENIED_MESSAGE['no-session'],
   'no-quiz': 'クイズを選択してください。',
@@ -142,7 +145,7 @@ const LOBBY_DENIED_MESSAGE: Record<string, string> = {
 }
 
 function respondLobby(c: ComponentContext<{ Bindings: Bindings }>, result: LobbyResult) {
-  if (!result.ok) return c.ephemeral().res(LOBBY_DENIED_MESSAGE[result.reason] ?? 'エラー')
+  if (!result.ok) return c.ephemeral().res(LOBBY_DENIED_MESSAGE[result.reason])
   return c.resUpdate({
     ...buildLobbyPanel(result.view),
     // 参加者一覧に <@id> が並ぶため、通知が飛ばないようにする
