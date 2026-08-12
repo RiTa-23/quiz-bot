@@ -1,0 +1,10 @@
+# apps/api ローカル開発用シークレット・変数（コピーして .dev.vars を作る）
+# .dev.vars の値は wrangler.jsonc の vars を上書きする（ローカル開発用）。
+
+# OAuth2 クレデンシャル（Discord Developer Portal > OAuth2）
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+
+# wrangler.jsonc の vars は本番値。ローカル開発では以下で上書きする
+WEB_ORIGIN=http://localhost:5173
+DISCORD_OAUTH_REDIRECT_URI=http://localhost:8787/auth/discord/callback

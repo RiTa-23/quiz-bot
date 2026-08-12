@@ -5,7 +5,8 @@ import type { Bindings, Variables } from './env'
 const SESSION_COOKIE = 'session_id'
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30 // 30日
 
-type SessionData = { userId: string; username: string }
+export type SessionGuild = { id: string; name: string }
+type SessionData = { userId: string; username: string; guilds: SessionGuild[] }
 
 const DISCORD_API = 'https://discord.com/api/v10'
 
@@ -62,8 +63,23 @@ authRoutes.get('/discord/callback', async (c) => {
   }
   const user = (await userRes.json()) as { id: string; username: string }
 
+  // 所属サーバー一覧は以降のリクエストの guild_id 検証の唯一の根拠になるため、
+  // 取得に失敗したまま空でセッションを作らない（何も操作できないセッションが出来てしまう）。
+  const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
+    headers: { Authorization: `Bearer ${token.access_token}` },
+  })
+  if (!guildsRes.ok) {
+    return c.json(
+      { error: { code: 'UNAUTHORIZED', message: 'failed to fetch discord guilds' } },
+      401,
+    )
+  }
+  const guilds: SessionGuild[] = ((await guildsRes.json()) as { id: string; name: string }[]).map(
+    (g) => ({ id: g.id, name: g.name }),
+  )
+
   const sessionId = crypto.randomUUID()
-  const session: SessionData = { userId: user.id, username: user.username }
+  const session: SessionData = { userId: user.id, username: user.username, guilds }
   await c.env.SESSIONS.put(`session:${sessionId}`, JSON.stringify(session), {
     expirationTtl: SESSION_TTL_SECONDS,
   })
@@ -88,16 +104,22 @@ authRoutes.post('/logout', async (c) => {
   return c.json({ ok: true })
 })
 
-/** Cookieのsession_idからユーザーIDを解決する。未ログインならnull。 */
-export async function resolveUserId(
+export type Session = { userId: string; username: string; guilds: SessionGuild[] }
+
+export async function resolveSession(
   env: Bindings,
   sessionId: string | undefined,
-): Promise<string | null> {
+): Promise<Session | null> {
   if (!sessionId) return null
   const raw = await env.SESSIONS.get(`session:${sessionId}`)
   if (!raw) return null
-  const session = JSON.parse(raw) as SessionData
-  return session.userId
+  const s = JSON.parse(raw) as Partial<SessionData>
+  // guilds を持たない旧セッションは所属検証ができず何も操作できないため、破棄して再ログインさせる
+  if (!s.userId || !s.guilds) {
+    await env.SESSIONS.delete(`session:${sessionId}`)
+    return null
+  }
+  return { userId: s.userId, username: s.username ?? '', guilds: s.guilds }
 }
 
 export { SESSION_COOKIE }

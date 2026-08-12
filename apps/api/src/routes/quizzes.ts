@@ -1,23 +1,27 @@
 import {
-  addEditor,
   addPublicQuiz,
   addQuestion,
   createDb,
   createQuiz,
   deleteQuestion,
   deleteQuiz,
+  getEditorSettings,
   getQuiz,
   getQuizStats,
   getRandomQuestion,
+  listAddedQuizzes,
+  listPublicQuizzes,
   listQuizzes,
   removeAddedQuiz,
-  removeEditor,
+  setGuildEditor,
+  setUserEditors,
   submitAttempt,
   updateQuestion,
   updateQuiz,
 } from '@quiz-bot/core'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { actorForGuild, actorFromQuery } from '../actor'
 import type { Bindings, Variables } from '../env'
 import { handleApiError } from '../errorHandler'
 import { requireAuth } from '../middleware/requireAuth'
@@ -26,21 +30,36 @@ export const quizzesRoutes = new Hono<{ Bindings: Bindings; Variables: Variables
 
 quizzesRoutes.use('*', requireAuth)
 
-function actorOf(c: {
-  get: (key: 'userId') => string
-  req: { query: (key: string) => string | undefined }
-}) {
-  return {
-    userId: c.get('userId'),
-    guildId: c.req.query('guild_id') ?? null,
+// ── 公開クイズの探索（/:id より前に定義する。でないと `public` が :id として解釈される）──
+
+quizzesRoutes.get('/public', async (c) => {
+  try {
+    const db = createDb(c.env.DB)
+    const keyword = c.req.query('keyword')
+    const quizzes = await listPublicQuizzes(db, actorFromQuery(c), { keyword })
+    return c.json(quizzes)
+  } catch (error) {
+    return handleApiError(c, error)
   }
-}
+})
+
+quizzesRoutes.get('/added', async (c) => {
+  try {
+    const db = createDb(c.env.DB)
+    const quizzes = await listAddedQuizzes(db, actorFromQuery(c))
+    return c.json(quizzes)
+  } catch (error) {
+    return handleApiError(c, error)
+  }
+})
+
+// ── クイズ ──
 
 quizzesRoutes.get('/', async (c) => {
   try {
     const guildId = c.req.query('guild_id')
     const db = createDb(c.env.DB)
-    const quizzes = await listQuizzes(db, actorOf(c), guildId ? { guildId } : undefined)
+    const quizzes = await listQuizzes(db, actorFromQuery(c), guildId ? { guildId } : undefined)
     return c.json(quizzes)
   } catch (error) {
     return handleApiError(c, error)
@@ -59,7 +78,7 @@ quizzesRoutes.post('/', async (c) => {
   try {
     const body = createQuizSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const actor = { userId: c.get('userId'), guildId: body.owner_guild_id }
+    const actor = actorForGuild(c, body.owner_guild_id)
     const quiz = await createQuiz(db, actor, {
       title: body.title,
       description: body.description,
@@ -75,7 +94,7 @@ quizzesRoutes.post('/', async (c) => {
 quizzesRoutes.get('/:id', async (c) => {
   try {
     const db = createDb(c.env.DB)
-    const quiz = await getQuiz(db, actorOf(c), c.req.param('id'))
+    const quiz = await getQuiz(db, actorFromQuery(c), c.req.param('id'))
     return c.json(quiz)
   } catch (error) {
     return handleApiError(c, error)
@@ -92,7 +111,8 @@ quizzesRoutes.patch('/:id', async (c) => {
   try {
     const body = updateQuizSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const quiz = await updateQuiz(db, actorOf(c), c.req.param('id'), body)
+    // 管理操作は作成者本人チェック（core内）で担保されるため guildId は不要
+    const quiz = await updateQuiz(db, actorForGuild(c, null), c.req.param('id'), body)
     return c.json(quiz)
   } catch (error) {
     return handleApiError(c, error)
@@ -102,12 +122,14 @@ quizzesRoutes.patch('/:id', async (c) => {
 quizzesRoutes.delete('/:id', async (c) => {
   try {
     const db = createDb(c.env.DB)
-    await deleteQuiz(db, actorOf(c), c.req.param('id'))
+    await deleteQuiz(db, actorForGuild(c, null), c.req.param('id'))
     return c.body(null, 204)
   } catch (error) {
     return handleApiError(c, error)
   }
 })
+
+// ── 設問 ──
 
 const questionSchema = z.object({
   type: z.enum(['multiple_choice', 'true_false', 'free_text']),
@@ -122,7 +144,7 @@ quizzesRoutes.post('/:id/questions', async (c) => {
   try {
     const body = questionSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const question = await addQuestion(db, actorOf(c), c.req.param('id'), {
+    const question = await addQuestion(db, actorFromQuery(c), c.req.param('id'), {
       type: body.type,
       body: body.body,
       choices: body.choices,
@@ -142,14 +164,20 @@ quizzesRoutes.patch('/:id/questions/:qid', async (c) => {
   try {
     const body = questionUpdateSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const question = await updateQuestion(db, actorOf(c), c.req.param('id'), c.req.param('qid'), {
-      type: body.type,
-      body: body.body,
-      choices: body.choices,
-      answers: body.answers,
-      explanation: body.explanation,
-      sortOrder: body.sort_order,
-    })
+    const question = await updateQuestion(
+      db,
+      actorFromQuery(c),
+      c.req.param('id'),
+      c.req.param('qid'),
+      {
+        type: body.type,
+        body: body.body,
+        choices: body.choices,
+        answers: body.answers,
+        explanation: body.explanation,
+        sortOrder: body.sort_order,
+      },
+    )
     return c.json(question)
   } catch (error) {
     return handleApiError(c, error)
@@ -159,23 +187,26 @@ quizzesRoutes.patch('/:id/questions/:qid', async (c) => {
 quizzesRoutes.delete('/:id/questions/:qid', async (c) => {
   try {
     const db = createDb(c.env.DB)
-    await deleteQuestion(db, actorOf(c), c.req.param('id'), c.req.param('qid'))
+    await deleteQuestion(db, actorFromQuery(c), c.req.param('id'), c.req.param('qid'))
     return c.body(null, 204)
   } catch (error) {
     return handleApiError(c, error)
   }
 })
 
+// ── 公開クイズの追加・取り外し（追加する側のサーバー操作）──
+
 const shareSchema = z.object({ target_guild_id: z.string() })
 
-// 公開クイズを指定サーバーに追加する（作成者による押し付けではなく、
-// 追加する側の操作として扱う。Botの `/quiz add-public` と同じ経路）
 quizzesRoutes.post('/:id/shares', async (c) => {
   try {
     const body = shareSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const actor = { userId: c.get('userId'), guildId: body.target_guild_id }
-    const result = await addPublicQuiz(db, actor, c.req.param('id'))
+    const result = await addPublicQuiz(
+      db,
+      actorForGuild(c, body.target_guild_id),
+      c.req.param('id'),
+    )
     return c.json(result, 201)
   } catch (error) {
     return handleApiError(c, error)
@@ -186,48 +217,61 @@ quizzesRoutes.delete('/:id/shares', async (c) => {
   try {
     const body = shareSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const actor = { userId: c.get('userId'), guildId: body.target_guild_id }
-    await removeAddedQuiz(db, actor, c.req.param('id'))
+    await removeAddedQuiz(db, actorForGuild(c, body.target_guild_id), c.req.param('id'))
     return c.body(null, 204)
   } catch (error) {
     return handleApiError(c, error)
   }
 })
 
-const editorSchema = z.object({
-  target_type: z.enum(['guild', 'user']),
-  target_id: z.string(),
-})
+// ── 編集権限（作成者のみ。設定を指定状態に揃える）──
 
-quizzesRoutes.post('/:id/editors', async (c) => {
+quizzesRoutes.get('/:id/editors', async (c) => {
   try {
-    const body = editorSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const editor = await addEditor(db, actorOf(c), c.req.param('id'), {
-      targetType: body.target_type,
-      targetId: body.target_id,
-    })
-    return c.json(editor, 201)
+    // guildAllowed はこのサーバーに対する設定なので guild_id を検証して渡す
+    const settings = await getEditorSettings(db, actorFromQuery(c), c.req.param('id'))
+    return c.json(settings)
   } catch (error) {
     return handleApiError(c, error)
   }
 })
 
-quizzesRoutes.delete('/:id/editors/:editorId', async (c) => {
+const guildEditorSchema = z.object({ guild_id: z.string(), allowed: z.boolean() })
+
+quizzesRoutes.put('/:id/editors/guild', async (c) => {
   try {
+    const body = guildEditorSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    await removeEditor(db, actorOf(c), c.req.param('id'), c.req.param('editorId'))
+    await setGuildEditor(db, actorForGuild(c, body.guild_id), c.req.param('id'), body.allowed)
     return c.body(null, 204)
   } catch (error) {
     return handleApiError(c, error)
   }
 })
+
+const userEditorsSchema = z.object({ user_ids: z.array(z.string()) })
+
+quizzesRoutes.put('/:id/editors/users', async (c) => {
+  try {
+    const body = userEditorsSchema.parse(await c.req.json())
+    const db = createDb(c.env.DB)
+    await setUserEditors(db, actorForGuild(c, null), c.req.param('id'), body.user_ids)
+    return c.body(null, 204)
+  } catch (error) {
+    return handleApiError(c, error)
+  }
+})
+
+// ── 出題プレビュー（Web上での動作確認用）──
 
 quizzesRoutes.get('/:id/questions/random', async (c) => {
   try {
     const db = createDb(c.env.DB)
     const questionId = c.req.query('question_id')
-    const question = await getRandomQuestion(db, actorOf(c), c.req.param('id'), { questionId })
+    const question = await getRandomQuestion(db, actorFromQuery(c), c.req.param('id'), {
+      questionId,
+    })
     return c.json(question)
   } catch (error) {
     return handleApiError(c, error)
@@ -236,7 +280,6 @@ quizzesRoutes.get('/:id/questions/random', async (c) => {
 
 const attemptSchema = z.object({
   guild_id: z.string(),
-  user_id: z.string(),
   submitted_answer: z.string(),
 })
 
@@ -244,10 +287,9 @@ quizzesRoutes.post('/:id/questions/:qid/attempts', async (c) => {
   try {
     const body = attemptSchema.parse(await c.req.json())
     const db = createDb(c.env.DB)
-    const actor = { userId: c.get('userId'), guildId: body.guild_id }
     const result = await submitAttempt(
       db,
-      actor,
+      actorForGuild(c, body.guild_id),
       c.req.param('id'),
       c.req.param('qid'),
       body.submitted_answer,
@@ -261,7 +303,10 @@ quizzesRoutes.post('/:id/questions/:qid/attempts', async (c) => {
 quizzesRoutes.get('/:id/stats', async (c) => {
   try {
     const db = createDb(c.env.DB)
-    const stats = await getQuizStats(db, actorOf(c), c.req.param('id'))
+    const guildId = c.req.query('guild_id')
+    const stats = await getQuizStats(db, actorFromQuery(c), c.req.param('id'), {
+      guildId: guildId || undefined,
+    })
     return c.json(stats)
   } catch (error) {
     return handleApiError(c, error)
