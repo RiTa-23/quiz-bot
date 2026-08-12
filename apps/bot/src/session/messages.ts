@@ -1,5 +1,5 @@
 import { Button, Components, Modal, Select, TextInput } from 'discord-hono'
-import type { DraftView, NextStep, PublicSessionQuestion, SummaryData } from './types'
+import type { DraftView, LobbyView, NextStep, PublicSessionQuestion, SummaryData } from './types'
 
 // ── コンポーネントのハンドラキー（custom_id の先頭 ';' より前）──
 export const CFG_QUIZ_SELECT = 'cqs' // クイズ選択プルダウン
@@ -7,7 +7,9 @@ export const CFG_PAGE_PREV = 'cpp' // 前ページ
 export const CFG_PAGE_NEXT = 'cpn' // 次ページ
 export const CFG_MODE_TOGGLE = 'cmt' // プレイ形式トグル
 export const CFG_COUNT_SELECT = 'ccs' // 出題数プルダウン
-export const CFG_PLAY = 'cpl' // Play開始
+export const CFG_PLAY = 'cpl' // Play開始（早押しでは募集開始）
+export const LOBBY_JOIN = 'lbj' // 募集パネル: 参加
+export const LOBBY_START = 'lbs' // 募集パネル: ゲーム開始
 
 export const SESSION_ANSWER = 'sba' // セッション: 4択/○×ボタン回答（data = questionId:idx）
 export const SESSION_FT_OPEN = 'sfo' // セッション: 自由記述モーダルを開く（data = questionId:messageId）
@@ -88,9 +90,10 @@ export function buildConfigPanel(view: DraftView): { content: string; components
     ),
   )
 
+  const playLabel = view.mode === 'buzz' ? '📣 募集開始' : '▶ Play'
   components.row(
     new Button(CFG_MODE_TOGGLE, `形式: ${modeLabel(view.mode)}`, 'Secondary'),
-    new Button(CFG_PLAY, '▶ Play', 'Success'),
+    new Button(CFG_PLAY, playLabel, 'Success'),
   )
 
   const lines = [
@@ -101,7 +104,38 @@ export function buildConfigPanel(view: DraftView): { content: string; components
   lines.push(
     `出題数: ${view.count}`,
     `プレイ形式: ${modeLabel(view.mode)}`,
-    '設定したら **Play** を押してください。',
+    view.mode === 'buzz'
+      ? '設定したら **募集開始** を押してください。'
+      : '設定したら **Play** を押してください。',
+  )
+
+  return { content: lines.join('\n'), components }
+}
+
+/** 早押しの参加者募集パネル。 */
+export function buildLobbyPanel(view: LobbyView): { content: string; components: Components } {
+  const components = new Components()
+  components.row(
+    new Button(LOBBY_JOIN, '🙋 参加する', 'Primary'),
+    ...(view.canStart ? [new Button(LOBBY_START, '▶ Play', 'Success')] : []),
+  )
+
+  const lines = [
+    '**⚡ みんなで早押し — 参加者募集中**',
+    `クイズ: ${view.quizTitle ?? '（未選択）'}`,
+  ]
+  if (view.quizDescription) lines.push(`> ${view.quizDescription}`)
+  lines.push(
+    `出題数: ${view.count}問`,
+    '',
+    `**参加者（${view.participants.length}人）**`,
+    view.participants
+      .map((id) => `・<@${id}>${id === view.hostUserId ? '（ホスト）' : ''}`)
+      .join('\n'),
+    '',
+    view.canStart
+      ? 'ホストが **Play** を押すと開始します。'
+      : 'あと1人以上でゲームを開始できます。',
   )
 
   return { content: lines.join('\n'), components }

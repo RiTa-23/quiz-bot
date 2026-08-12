@@ -21,9 +21,12 @@ import type {
   AnswerOutcome,
   ControlResult,
   DraftView,
+  LobbyResult,
+  LobbyView,
   Mode,
   NextStep,
   OpenDraftResult,
+  PlayResult,
   PublicSessionQuestion,
   StartResult,
 } from './types'
@@ -43,7 +46,7 @@ type SessionQuestion = {
 }
 
 type State = {
-  status: 'draft' | 'active' | 'finished'
+  status: 'draft' | 'lobby' | 'active' | 'finished'
   guildId: string
   channelId: string
   hostUserId: string
@@ -53,6 +56,8 @@ type State = {
   page: number
   count: number
   mode: Mode
+  // lobby（早押しの参加者。ホストを含む。デプロイを跨いだ既存セッションには存在しない）
+  participants?: string[]
   // active
   questions: SessionQuestion[]
   index: number
@@ -151,7 +156,7 @@ export class QuizSession extends DurableObject<Bindings> {
    */
   async openDraft(actor: Actor, channelId: string): Promise<OpenDraftResult> {
     const prev = this.state
-    if (prev && prev.status === 'active') {
+    if (prev && (prev.status === 'active' || prev.status === 'lobby')) {
       if (prev.hostUserId !== actor.userId) {
         return { ok: false, reason: 'active-session', hostUserId: prev.hostUserId }
       }
@@ -170,6 +175,7 @@ export class QuizSession extends DurableObject<Bindings> {
       page: 0,
       count: 1,
       mode: 'solo',
+      participants: [],
       questions: [],
       index: 0,
       soloCorrect: 0,
@@ -238,12 +244,64 @@ export class QuizSession extends DurableObject<Bindings> {
     return { ok: true, view: await this.view() }
   }
 
+  /** 設定パネルのPlay押下。早押しは参加者募集へ、1人はそのまま開始する。 */
+  async play(userId: string, messageId: string): Promise<PlayResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return { kind: 'start', result: denied }
+    if ((this.state as State).mode === 'buzz') {
+      return { kind: 'lobby', result: await this.openLobby(userId, messageId) }
+    }
+    return { kind: 'start', result: await this.start(userId, messageId) }
+  }
+
+  private async lobbyView(): Promise<LobbyView> {
+    const s = this.state as State
+    const draft = await this.view()
+    const participants = s.participants ?? []
+    return {
+      hostUserId: s.hostUserId,
+      quizTitle: draft.selectedQuizTitle,
+      quizDescription: draft.selectedQuizDescription,
+      count: draft.count,
+      participants,
+      canStart: participants.length >= 2,
+    }
+  }
+
+  /** 早押しの募集開始（ホストのみ）。ホストは自動で参加者に入る。 */
+  async openLobby(userId: string, messageId: string): Promise<LobbyResult> {
+    const denied = this.guardHost(userId)
+    if (denied) return denied
+    const s = this.state as State
+    if (!s.quizId) return { ok: false, reason: 'no-quiz' }
+    s.status = 'lobby'
+    s.messageId = messageId
+    s.participants = [s.hostUserId]
+    await this.save()
+    return { ok: true, view: await this.lobbyView() }
+  }
+
+  /** 募集への参加。ホストは既に参加者なので押しても何も起きない。 */
+  async join(userId: string): Promise<LobbyResult> {
+    const s = this.state
+    if (!s || s.status !== 'lobby') return { ok: false, reason: 'no-session' }
+    if (userId === s.hostUserId) return { ok: false, reason: 'host-cannot-join' }
+    if (!s.participants) s.participants = [s.hostUserId]
+    if (s.participants.includes(userId)) return { ok: false, reason: 'already' }
+    s.participants.push(userId)
+    await this.save()
+    return { ok: true, view: await this.lobbyView() }
+  }
+
   /** Play押下時: 設問を確定してセッションを開始する。 */
   async start(userId: string, messageId: string): Promise<StartResult> {
     const denied = this.guardHost(userId)
     if (denied) return denied
     const s = this.state as State
     if (!s.quizId) return { ok: false, reason: 'no-quiz' }
+    if (s.mode === 'buzz' && (s.participants?.length ?? 0) < 2) {
+      return { ok: false, reason: 'not-enough-players' }
+    }
 
     const db = createDb(this.env.DB)
     // getSessionQuestions は設問0件のとき notFound を投げるので、それだけを
@@ -265,6 +323,7 @@ export class QuizSession extends DurableObject<Bindings> {
     s.messageId = messageId
     s.soloCorrect = 0
     s.soloPending = []
+    if (s.mode === 'solo') s.participants = [s.hostUserId]
     s.buzzScores = {}
     this.resetQuestionState()
     await this.save()
@@ -355,6 +414,10 @@ export class QuizSession extends DurableObject<Bindings> {
     }
 
     // buzz
+    // participants 未設定の既存セッション（旧フローで開始済み）は全員参加扱いにする
+    if (s.participants && !s.participants.includes(userId)) {
+      return { kind: 'ignored', reason: 'not-participant' }
+    }
     if (s.buzzClosed) return { kind: 'ignored', reason: 'closed' }
     if (s.buzzAnswered.includes(userId)) return { kind: 'ignored', reason: 'already' }
     s.buzzAnswered.push(userId)

@@ -40,6 +40,8 @@ import { handleQuizCommand } from './commands/quiz'
 import type { Bindings } from './env'
 import {
   handleCountSelect,
+  handleLobbyJoin,
+  handleLobbyStart,
   handleModeToggle,
   handlePageNext,
   handlePagePrev,
@@ -56,6 +58,8 @@ import {
   CFG_PAGE_PREV,
   CFG_PLAY,
   CFG_QUIZ_SELECT,
+  LOBBY_JOIN,
+  LOBBY_START,
   SESSION_ANSWER,
   SESSION_FT_MODAL,
   SESSION_FT_OPEN,
@@ -134,6 +138,8 @@ app.component(CFG_PAGE_NEXT, (c) => guard(c, () => handlePageNext(c), true))
 app.component(CFG_MODE_TOGGLE, (c) => guard(c, () => handleModeToggle(c), true))
 app.component(CFG_COUNT_SELECT, (c) => guard(c, () => handleCountSelect(c), true))
 app.component(CFG_PLAY, (c) => guard(c, () => handlePlay(c), true))
+app.component(LOBBY_JOIN, (c) => guard(c, () => handleLobbyJoin(c), true))
+app.component(LOBBY_START, (c) => guard(c, () => handleLobbyStart(c), true))
 
 // セッション回答
 app.component(SESSION_ANSWER, (c) => guard(c, () => handleSessionAnswer(c), true))
