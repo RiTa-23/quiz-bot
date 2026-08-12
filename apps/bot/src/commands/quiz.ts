@@ -3,7 +3,9 @@ import type { CommandContext } from 'discord-hono'
 import { actorFromInteraction } from '../actor'
 import { handleDeleteCommand } from '../authoring/deleteHandlers'
 import { handleAddQuestionCommand } from '../authoring/handlers'
+import { successEmbed } from '../embeds'
 import type { Bindings } from '../env'
+import { handleHelpCommand } from '../help/helpHandlers'
 import { handleQuizPlay } from '../session/handlers'
 import { handleEditorsCommand } from '../sharing/editorHandlers'
 import {
@@ -28,14 +30,22 @@ export async function handleQuizCommand(c: CommandContext<{ Bindings: Bindings }
         title: v.title ?? '',
         description: v.description ?? null,
       })
-      const lines = [`クイズを作成しました: **${quiz.title}**`]
-      if (quiz.description) lines.push(`> ${quiz.description}`)
-      lines.push(
-        '`/quiz add-question` で設問を追加できます。',
-        '編集はこのサーバーの全員に許可されています（`/quiz editors` で変更できます）。',
-      )
-      return c.res(lines.join('\n'))
+      return c.res({
+        embeds: [
+          successEmbed('クイズを作成しました', quiz.description ?? undefined).fields(
+            { name: 'タイトル', value: quiz.title },
+            { name: '次にすること', value: '`/quiz add-question` で設問を追加できます。' },
+            {
+              name: '編集できる人',
+              value: 'このサーバーの全員に許可されています（`/quiz editors` で変更できます）。',
+            },
+          ),
+        ],
+      })
     }
+
+    case 'help':
+      return handleHelpCommand(c)
 
     case 'play':
       return handleQuizPlay(c)

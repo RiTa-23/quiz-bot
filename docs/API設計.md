@@ -74,6 +74,18 @@
 
 ---
 
+## OGP画像
+
+### `GET /og`
+SNS共有用のOGP画像（PNG 1200x630）を生成して返す。**認証・CORSの対象外**（クローラーが認証なしで取得するため）。
+
+- Query: `title` / `subtitle`（省略時はサイト全体の既定カード）
+- Web の `index.html` の `og:image` がこのエンドポイントを指す
+- 日本語フォントはWorkerに同梱せず、描画する文字だけのサブセットを Google Fonts から取得する（`text=` 指定。UAを送らないと satori が読めるTTFが返る）
+- 生成結果は `Cache-Control: public, max-age=86400`
+
+---
+
 ## 設問
 
 ### `POST /api/quizzes/:id/questions`

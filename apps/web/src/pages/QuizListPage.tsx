@@ -42,7 +42,7 @@ export function QuizListPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{guildName(guildId)} のクイズ</h1>
+        <h1 className="text-2xl">{guildName(guildId)} のクイズ</h1>
         <Button onClick={() => setCreating((v) => !v)}>
           {creating ? '閉じる' : '＋ 新規作成'}
         </Button>
@@ -61,21 +61,21 @@ export function QuizListPage() {
       {loading && <Spinner />}
       {error && <ErrorNote message={error} />}
       {data && data.length === 0 && (
-        <p className="text-sm text-gray-500">まだクイズがありません。「新規作成」から作れます。</p>
+        <p className="text-sm text-navy-300">まだクイズがありません。「新規作成」から作れます。</p>
       )}
       {data && data.length > 0 && (
-        <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+        <ul className="divide-y divide-paper-line rounded border border-paper-line bg-paper-raised shadow-panel">
           {data.map((q) => (
-            <li key={q.id} className="p-4 hover:bg-gray-50">
+            <li key={q.id} className="p-4 hover:bg-paper">
               <Link to={`/quizzes/${q.id}`} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-gray-900">{q.title}</p>
+                  <p className="truncate font-medium text-navy-900">{q.title}</p>
                   {q.description && (
-                    <p className="truncate text-sm text-gray-500">{q.description}</p>
+                    <p className="truncate text-sm text-navy-300">{q.description}</p>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {q.visibility === 'public' && <Badge tone="indigo">公開</Badge>}
+                  {q.visibility === 'public' && <Badge tone="gold">公開</Badge>}
                   <Badge tone={q.isOwner ? 'green' : 'gray'}>{ROLE_LABEL[q.role] ?? q.role}</Badge>
                 </div>
               </Link>

@@ -1,5 +1,6 @@
 import type { BuzzRankingEntry, MemberStats, QuizStats, RankingEntry } from '@quiz-bot/core'
-import { Button, Components, Select } from 'discord-hono'
+import { Button, Components, type Embed, Select } from 'discord-hono'
+import { COLOR, noticeEmbed, panelEmbed } from '../embeds'
 import { addPageRow, pageLabel, paginate } from '../paging'
 
 // ── コンポーネントのハンドラキー ──
@@ -105,66 +106,95 @@ export function buildQuizStatsMessage(stats: QuizStats): string {
   return joinWithBudget(head, items, '問')
 }
 
-/** /quiz my-stats のメッセージ。 */
-export function buildMemberStatsMessage(stats: MemberStats): string {
+/** /quiz my-stats の埋め込み。 */
+export function buildMemberStatsMessage(stats: MemberStats): Embed {
   const { solo, buzz } = stats
   if (solo.totalAttempts === 0 && buzz.answeredCount === 0) {
-    return `<@${stats.userId}> のこのサーバーでの記録はまだありません。\`/quiz play\` で遊ぶと記録されます。`
+    return noticeEmbed(
+      '成績',
+      `<@${stats.userId}> のこのサーバーでの記録はまだありません。\n\`/quiz play\` で遊ぶと記録されます。`,
+    )
   }
 
-  const lines = [
-    `📊 <@${stats.userId}> の成績（このサーバー・全期間）`,
-    '',
-    '**🧍 1人モード**',
-    solo.totalAttempts === 0
-      ? '記録なし'
-      : `回答 ${solo.totalAttempts}問 / 正解 ${solo.correctCount}問（正答率 ${pct(solo.correctCount, solo.totalAttempts)}）\nプレイしたクイズ: ${solo.quizCount}件`,
-    '',
-    '**⚡ 早押し**',
-    buzz.answeredCount === 0
-      ? '記録なし'
-      : `回答 ${buzz.answeredCount}回 / 獲得 ${buzz.winCount}回（獲得率 ${pct(buzz.winCount, buzz.answeredCount)}）`,
+  const fields = [
+    {
+      name: '1人モード',
+      value:
+        solo.totalAttempts === 0
+          ? '記録なし'
+          : `正解 **${solo.correctCount}** / ${solo.totalAttempts}問（${pct(solo.correctCount, solo.totalAttempts)}）\nプレイしたクイズ: ${solo.quizCount}件`,
+      inline: true,
+    },
+    {
+      name: '早押し',
+      value:
+        buzz.answeredCount === 0
+          ? '記録なし'
+          : `獲得 **${buzz.winCount}** / ${buzz.answeredCount}回答（${pct(buzz.winCount, buzz.answeredCount)}）`,
+      inline: true,
+    },
   ]
 
   if (stats.topQuizzes.length > 0) {
-    lines.push('', '**よく遊んだクイズ**')
-    for (const q of stats.topQuizzes) {
-      lines.push(
-        `・${truncate(q.title, 40)} — ${q.totalAttempts}問中 ${q.correctCount}正解（${pct(q.correctCount, q.totalAttempts)}）`,
-      )
-    }
+    fields.push({
+      name: 'よく遊んだクイズ',
+      value: stats.topQuizzes
+        .map(
+          (q) =>
+            `・${truncate(q.title, 40)} — ${q.correctCount}/${q.totalAttempts}（${pct(q.correctCount, q.totalAttempts)}）`,
+        )
+        .join('\n'),
+      inline: false,
+    })
   }
-  return lines.join('\n')
+
+  return panelEmbed({
+    title: '成績',
+    description: `<@${stats.userId}> のこのサーバーでの記録（全期間）`,
+    fields,
+  })
 }
 
-/** /quiz ranking のメッセージ。 */
-export function buildRankingMessage(solo: RankingEntry[], buzz: BuzzRankingEntry[]): string {
+const MEDALS = ['🥇', '🥈', '🥉']
+
+const rank = (i: number) => MEDALS[i] ?? `${i + 1}.`
+
+/** /quiz ranking の埋め込み。 */
+export function buildRankingMessage(solo: RankingEntry[], buzz: BuzzRankingEntry[]): Embed {
   if (solo.length === 0 && buzz.length === 0) {
-    return 'このサーバーにはまだプレイ記録がありません。`/quiz play` で遊ぶとランキングに反映されます。'
+    return noticeEmbed(
+      'サーバーランキング',
+      'このサーバーにはまだプレイ記録がありません。\n`/quiz play` で遊ぶとランキングに反映されます。',
+    )
   }
 
-  const lines = ['📊 **サーバーランキング**（全期間）', '', '**🧍 1人モード**（正解数順）']
-  if (solo.length === 0) {
-    lines.push('まだ記録がありません')
-  } else {
-    solo.forEach((e, i) => {
-      lines.push(
-        `${i + 1}. <@${e.userId}> — ${e.correctCount}正解 / ${e.totalAttempts}問（${pct(e.correctCount, e.totalAttempts)}）`,
-      )
-    })
-  }
+  const soloList =
+    solo.length === 0
+      ? 'まだ記録がありません'
+      : solo
+          .map(
+            (e, i) =>
+              `${rank(i)} <@${e.userId}> — **${e.correctCount}**正解 / ${e.totalAttempts}問（${pct(e.correctCount, e.totalAttempts)}）`,
+          )
+          .join('\n')
 
-  lines.push('', '**⚡ 早押し**（獲得数順）')
-  if (buzz.length === 0) {
-    lines.push('まだ記録がありません')
-  } else {
-    buzz.forEach((e, i) => {
-      lines.push(
-        `${i + 1}. <@${e.userId}> — ${e.winCount}獲得 / ${e.answeredCount}回答（${pct(e.winCount, e.answeredCount)}）`,
-      )
-    })
-  }
+  const buzzList =
+    buzz.length === 0
+      ? 'まだ記録がありません'
+      : buzz
+          .map(
+            (e, i) =>
+              `${rank(i)} <@${e.userId}> — **${e.winCount}**獲得 / ${e.answeredCount}回答（${pct(e.winCount, e.answeredCount)}）`,
+          )
+          .join('\n')
 
-  const content = lines.join('\n')
-  return content.length > MAX_CONTENT ? `${content.slice(0, MAX_CONTENT)}…` : content
+  return panelEmbed({
+    title: 'サーバーランキング',
+    color: COLOR.gold,
+    fields: [
+      { name: '1人モード（正解数順）', value: truncate(soloList, MAX_CONTENT / 2) },
+      { name: '早押し（獲得数順）', value: truncate(buzzList, MAX_CONTENT / 2) },
+    ],
+    footer: '全期間',
+  })
 }

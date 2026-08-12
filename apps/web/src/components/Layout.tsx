@@ -4,9 +4,12 @@ import { useGuild } from '../lib/GuildContext'
 import { logout } from '../lib/api'
 import { ErrorNote, Select } from './ui'
 
+// 現在地は下辺の金の罫で示す。塗りつぶしより盤面の落ち着きを保てる
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  `rounded-md px-3 py-1.5 text-sm font-medium ${
-    isActive ? 'bg-indigo-100 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
+  `border-b-2 px-3 py-3 text-sm font-bold transition ${
+    isActive
+      ? 'border-gold-400 text-paper'
+      : 'border-transparent text-navy-200 hover:border-navy-300 hover:text-paper'
   }`
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -27,10 +30,12 @@ export function Layout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-3 px-4 py-3">
-          <span className="font-semibold text-gray-900">クイズ管理</span>
+    <div className="min-h-screen bg-paper">
+      <header className="border-b-4 border-gold-400 bg-navy-900">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-4 px-4">
+          <span className="py-3 font-bold tracking-tight text-paper">
+            <span className="text-gold-400">Q.</span> クイズ管理
+          </span>
           <nav className="flex gap-1">
             <NavLink to="/quizzes" className={navClass}>
               クイズ
@@ -42,7 +47,7 @@ export function Layout({ children }: { children: ReactNode }) {
               統計
             </NavLink>
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3 py-2">
             {me.guilds.length > 0 ? (
               <Select
                 value={guildId ?? ''}
@@ -56,11 +61,11 @@ export function Layout({ children }: { children: ReactNode }) {
                 ))}
               </Select>
             ) : null}
-            <span className="text-sm text-gray-500">{me.username}</span>
+            <span className="text-sm text-navy-200">{me.username}</span>
             <button
               type="button"
               onClick={onLogout}
-              className="text-sm text-gray-500 hover:text-gray-800"
+              className="text-sm text-navy-200 underline-offset-2 hover:text-paper hover:underline"
             >
               ログアウト
             </button>

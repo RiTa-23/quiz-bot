@@ -1,10 +1,11 @@
-import type { Components } from 'discord-hono'
+import type { Components, Embed } from 'discord-hono'
 import type { CommandContext, ComponentContext, ModalContext } from 'discord-hono'
 import { actorFromInteraction } from '../actor'
 import type { Bindings } from '../env'
 import { editChannelMessage } from './discordRest'
 import {
   FT_INPUT,
+  buildAdvanceHeader,
   buildConfigPanel,
   buildFreetextModal,
   buildLobbyPanel,
@@ -176,24 +177,25 @@ export async function handleLobbyStart(c: ComponentContext<{ Bindings: Bindings 
 
 function advanceHeader(
   outcome: Extract<AnswerOutcome, { kind: 'solo-result' | 'buzz-win' }>,
-): string {
-  const answers = outcome.correctAnswers.join(' / ')
-  const exp = outcome.explanation ? `\n解説: ${outcome.explanation}` : ''
-  if (outcome.kind === 'buzz-win') {
-    return `🎉 <@${outcome.winnerId}> が正解！ 正解: ${answers}${exp}`
-  }
-  const mark = outcome.correct ? '✅ 正解' : '❌ 不正解'
-  return `前問: ${mark}（正解: ${answers}）${exp}`
+): Embed {
+  return buildAdvanceHeader({
+    kind: outcome.kind,
+    ...(outcome.kind === 'buzz-win'
+      ? { winnerId: outcome.winnerId }
+      : { correct: outcome.correct }),
+    correctAnswers: outcome.correctAnswers,
+    explanation: outcome.explanation,
+  })
 }
 
-/** 前問結果 + 次の設問（or サマリ）のメッセージを組み立てる。componentsがnullなら空にする。 */
+/** 前問結果 + 次の設問（or サマリ）を組み立てる。componentsがnullなら空にする。 */
 function renderAdvance(
   outcome: Extract<AnswerOutcome, { kind: 'solo-result' | 'buzz-win' }>,
   messageId: string,
-): { content: string; components: Components | null } {
+): { embeds: Embed[]; components: Components | null } {
   const header = advanceHeader(outcome)
   if (outcome.next.done) {
-    return { content: `${header}\n\n${buildSummary(outcome.next.summary)}`, components: null }
+    return { embeds: [header, buildSummary(outcome.next.summary)], components: null }
   }
   return buildSessionQuestion(outcome.next, messageId, header)
 }
@@ -212,7 +214,7 @@ export async function handleSessionAnswer(c: ComponentContext<{ Bindings: Bindin
   const messageId = c.interaction.message.id
   const rendered = renderAdvance(outcome, messageId)
   return c.resUpdate({
-    content: rendered.content,
+    embeds: rendered.embeds,
     components: rendered.components ?? [],
     // 勝者や順位に <@id> が入るため、通知が飛ばないようにする
     allowed_mentions: { parse: [] },
@@ -239,7 +241,7 @@ export async function handleSessionFtModal(c: ModalContext<{ Bindings: Bindings 
   const rendered = renderAdvance(outcome, messageId ?? '')
   if (messageId) {
     await editChannelMessage(c.env.DISCORD_TOKEN, channelId, messageId, {
-      content: rendered.content,
+      embeds: rendered.embeds.map((e) => e.toJSON()),
       components: rendered.components ? rendered.components.toJSON() : [],
     })
   }

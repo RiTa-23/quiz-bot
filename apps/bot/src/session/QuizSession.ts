@@ -15,7 +15,7 @@ import {
 } from '@quiz-bot/core'
 import type { Bindings } from '../env'
 import { editChannelMessage } from './discordRest'
-import { buildSessionQuestion, buildSummary } from './messages'
+import { buildAdvanceHeader, buildSessionQuestion, buildSummary } from './messages'
 import type {
   AnswerInput,
   AnswerOutcome,
@@ -545,7 +545,7 @@ export class QuizSession extends DurableObject<Bindings> {
     if (s.messageId) {
       await editChannelMessage(this.env.DISCORD_TOKEN, s.channelId, s.messageId, {
         content:
-          '⏰ 参加者が集まらなかったため募集を終了しました。もう一度 `/quiz play` から始めてください。',
+          '参加者が集まらなかったため募集を終了しました。もう一度 `/quiz play` から始めてください。',
         components: [],
       })
     }
@@ -580,15 +580,16 @@ export class QuizSession extends DurableObject<Bindings> {
       return
     }
 
+    const timeout = buildAdvanceHeader({ kind: 'timeout' })
     if (next.done) {
       await editChannelMessage(this.env.DISCORD_TOKEN, s.channelId, s.messageId, {
-        content: `⏰ 時間切れ。\n\n${buildSummary(next.summary)}`,
+        embeds: [timeout.toJSON(), buildSummary(next.summary).toJSON()],
         components: [],
       })
     } else {
-      const msg = buildSessionQuestion(next, s.messageId, '⏰ 時間切れ（正解者なし）')
+      const msg = buildSessionQuestion(next, s.messageId, timeout)
       await editChannelMessage(this.env.DISCORD_TOKEN, s.channelId, s.messageId, {
-        content: msg.content,
+        embeds: msg.embeds.map((e) => e.toJSON()),
         components: msg.components.toJSON(),
       })
       this.resetQuestionState()

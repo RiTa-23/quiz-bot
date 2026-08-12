@@ -6,6 +6,9 @@ export const quizCommand = new Command('quiz', 'クイズの作成・出題・�
     new Option('title', 'クイズのタイトル').required(),
     new Option('description', 'クイズの説明'),
   ),
+  new SubCommand('help', '使い方と遊び方を見る').options(
+    new Option('share', 'チャンネル全員に見せる（既定は自分だけ）', 'Boolean'),
+  ),
   new SubCommand('play', 'クイズの出題設定パネルを開く'),
   new SubCommand('delete', 'クイズを削除する（パネルで選択）'),
   new SubCommand('visibility', 'クイズの公開設定を変える（作成者のみ）'),

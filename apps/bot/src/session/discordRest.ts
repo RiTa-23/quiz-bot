@@ -8,7 +8,7 @@ export async function editChannelMessage(
   token: string,
   channelId: string,
   messageId: string,
-  payload: { content: string; components: unknown[] },
+  payload: { content?: string; embeds?: unknown[]; components: unknown[] },
 ): Promise<void> {
   const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
     method: 'PATCH',

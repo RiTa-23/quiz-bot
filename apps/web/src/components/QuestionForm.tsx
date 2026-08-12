@@ -88,9 +88,9 @@ export function QuestionForm({
             />
           </Field>
           <div className="space-y-1">
-            <span className="text-sm font-medium text-gray-700">正解（チェックした選択肢）</span>
+            <span className="text-sm font-medium text-navy-700">正解（チェックした選択肢）</span>
             {choices.length === 0 ? (
-              <p className="text-sm text-gray-400">先に選択肢を入力してください。</p>
+              <p className="text-sm text-navy-200">先に選択肢を入力してください。</p>
             ) : (
               <div className="space-y-1">
                 {choices.map((ch) => (
