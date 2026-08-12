@@ -3,6 +3,37 @@ import { loginUrl } from '../lib/api'
 import { useApi } from '../lib/hooks'
 import type { Me } from '../lib/types'
 
+const HERO_TAGS = [
+  { icon: '✏️', label: '自作できる' },
+  { icon: '🤝', label: 'みんなで編集' },
+  { icon: '🌐', label: '公開できる' },
+  { icon: '📥', label: '取り込める' },
+  { icon: '⚡', label: '早押し対戦' },
+]
+
+const FEATURES = [
+  {
+    icon: '🤝',
+    title: 'サーバーのみんなで共同編集',
+    body: '編集できる人を指名すれば、仲間と一緒に問題を持ち寄って育てられます。ひとりで抱え込まず、サーバーの総力でクイズが分厚くなっていきます。',
+  },
+  {
+    icon: '🌐',
+    title: '作ったクイズを公開できる',
+    body: '自信作は公開設定に。あなたのサーバーで生まれたクイズが、世界中のDiscordサーバーの遊び場になります。',
+  },
+  {
+    icon: '📥',
+    title: '公開クイズを取り込める',
+    body: 'ほかのサーバーの力作をそのまま自分のサーバーへ。取り込みは複製ではなく参照なので、元が更新されれば手元にも反映されます。',
+  },
+  {
+    icon: '⚡',
+    title: 'みんなでリアルタイム早押し',
+    body: 'ひとりでじっくり解くだけじゃない。募集して集まった仲間と、最初に正解した人が得点する早押しバトル。最後はランキングで盛り上がれます。',
+  },
+]
+
 const STEPS = [
   {
     n: '1',
@@ -23,6 +54,7 @@ const STEPS = [
 
 const MODES = [
   {
+    icon: '🧑‍💻',
     title: '1人で解く',
     lead: 'コマンドを実行した人が、自分のペースで解きます。',
     points: [
@@ -32,6 +64,7 @@ const MODES = [
     ],
   },
   {
+    icon: '⚡',
     title: 'みんなで早押し',
     lead: '募集して集まった人たちで、最初に正解した人が得点します。',
     points: [
@@ -89,9 +122,22 @@ export function LandingPage() {
             みんなとクイズを。
           </h1>
           <p className="mt-5 max-w-xl leading-relaxed text-navy-100">
-            クイズを作って、サーバーの仲間と早押しで対戦できるBotです。
-            設問づくりと共有はこの画面から、出題はDiscordから。
+            4択も○×も自由記述も、思いついた問題をそのまま出題。
+            仲間と一緒に育てて、公開して、ほかのサーバーへ広げていく。
+            ひとりでじっくりも、みんなで早押しも。
+            クイズを楽しむためのDiscord Botです。
           </p>
+          <ul className="mt-6 flex flex-wrap gap-2">
+            {HERO_TAGS.map((t) => (
+              <li
+                key={t.label}
+                className="inline-flex items-center gap-1.5 rounded border border-navy-300/60 bg-navy-800/60 px-3 py-1.5 text-sm font-bold text-navy-100"
+              >
+                <span aria-hidden>{t.icon}</span>
+                {t.label}
+              </li>
+            ))}
+          </ul>
           <div className="mt-8 flex flex-wrap gap-3">
             {install && (
               <a
@@ -122,6 +168,54 @@ export function LandingPage() {
         </div>
       </header>
 
+      <Section title="このBotでできること" lead="つくって、あそんで、ひろげる。ぜんぶまとめて。">
+        <div className="grid gap-4">
+          <div className="relative overflow-hidden rounded border border-gold-400 bg-navy-900 p-6 shadow-panel sm:p-8">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 -top-20 h-48 bg-[radial-gradient(60%_100%_at_50%_0%,rgba(232,179,65,0.16),transparent_70%)]"
+            />
+            <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+              <div
+                aria-hidden
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded border border-gold-400 bg-navy-800 text-4xl"
+              >
+                ✏️
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-gold-400">
+                  まずは、つくる
+                </span>
+                <h3 className="mt-1 text-xl text-paper sm:text-2xl">クイズを、自分たちで作れる</h3>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-navy-100">
+                  4択・○×・自由記述の3形式を自由に組み合わせて、思いついた問題をそのまま出題。
+                  自由記述は「東京」「とうきょう」のような表記ゆれもまとめて正解にできます。
+                  出題形式をカスタムできるから、内輪ネタから本格クイズまで思いのまま。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((f) => (
+              <div
+                key={f.title}
+                className="min-w-0 rounded border border-paper-line bg-paper-raised p-5 shadow-panel"
+              >
+                <div
+                  aria-hidden
+                  className="flex h-11 w-11 items-center justify-center rounded border border-gold-400 bg-gold-100 text-2xl"
+                >
+                  {f.icon}
+                </div>
+                <h3 className="mt-4 text-base">{f.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-navy-600">{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Section>
+
       <Section title="はじめかた">
         <ol className="grid gap-4 sm:grid-cols-3">
           {STEPS.map((s) => (
@@ -146,7 +240,12 @@ export function LandingPage() {
               key={m.title}
               className="min-w-0 rounded border border-paper-line bg-paper-raised p-5 shadow-panel"
             >
-              <h3 className="text-lg">{m.title}</h3>
+              <h3 className="flex items-center gap-2 text-lg">
+                <span aria-hidden className="text-2xl">
+                  {m.icon}
+                </span>
+                {m.title}
+              </h3>
               <p className="mt-2 text-sm text-navy-600">{m.lead}</p>
               <ul className="mt-4 space-y-2 text-sm text-navy-700">
                 {m.points.map((p) => (
@@ -163,30 +262,30 @@ export function LandingPage() {
         </div>
       </Section>
 
-      <Section title="つくる・くばる・ふりかえる" lead="出題以外もひととおりそろっています。">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[
-            {
-              h: '3つの出題形式',
-              b: '4択・○×・自由記述に対応。自由記述は「東京」「とうきょう」のように複数の正解を登録できます。',
-            },
-            {
-              h: '他サーバーへ共有',
-              b: 'クイズを公開にすると、他のサーバーが取り込んで遊べます。取り込みは複製ではなく参照なので、直した内容がそのまま反映されます。',
-            },
-            {
-              h: '成績とランキング',
-              b: '1人モードと早押しを別々に記録します。サーバー内のランキングや、クイズごとの正答率を見られます。',
-            },
-          ].map((c) => (
-            <div
-              key={c.h}
-              className="min-w-0 rounded border border-paper-line bg-paper-raised p-5 shadow-panel"
-            >
-              <h3 className="text-lg">{c.h}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-navy-600">{c.b}</p>
-            </div>
-          ))}
+      <Section title="成績とランキング" lead="遊んだ結果は記録に残ります。">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="min-w-0 rounded border border-paper-line bg-paper-raised p-5 shadow-panel">
+            <h3 className="flex items-center gap-2 text-lg">
+              <span aria-hidden className="text-2xl">
+                📊
+              </span>
+              クイズごとの成績
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-navy-600">
+              1人モードと早押しを別々に記録。クイズごとの正答率が見えるので、難しすぎる問題の手直しにも使えます。
+            </p>
+          </div>
+          <div className="min-w-0 rounded border border-paper-line bg-paper-raised p-5 shadow-panel">
+            <h3 className="flex items-center gap-2 text-lg">
+              <span aria-hidden className="text-2xl">
+                🏆
+              </span>
+              サーバー内ランキング
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-navy-600">
+              サーバー内のランキングを表示します。誰がいちばん正解しているか、みんなで確認できます。
+            </p>
+          </div>
         </div>
       </Section>
 
