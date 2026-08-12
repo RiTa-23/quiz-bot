@@ -1,13 +1,15 @@
 import type { EditorSettings } from '@quiz-bot/core'
 import { Button, Components, Select } from 'discord-hono'
+import { addPageRow, pageLabel, paginate } from '../paging'
 
 // ── コンポーネントのハンドラキー ──
 export const ED_QUIZ_SELECT = 'eds' // 対象クイズの選択
 export const ED_GUILD_ON = 'edon' // サーバー全員に許可（custom_id data = quizId）
 export const ED_GUILD_OFF = 'edoff' // サーバー全員への許可を解除（同上）
 export const ED_USER_SELECT = 'edu' // 個別ユーザー指定（custom_id data = quizId）
+export const ED_PAGE_PREV = 'edpp' // 前ページ（custom_id data = page:quizId）
+export const ED_PAGE_NEXT = 'edpn' // 次ページ（同上）
 
-export const PAGE_SIZE = 25
 /** Discordのセレクトが一度に選べる上限 */
 const MAX_USERS = 25
 
@@ -19,18 +21,26 @@ export function buildEditorPanel(
   quizzes: { id: string; title: string }[],
   selectedId: string,
   settings: EditorSettings | null,
+  page = 0,
 ): { content: string; components: Components } {
   const components = new Components()
   const selected = quizzes.find((q) => q.id === selectedId)
+  const slice = paginate(quizzes, page)
 
   components.row(
     new Select(ED_QUIZ_SELECT, 'String').options(
-      ...quizzes.slice(0, PAGE_SIZE).map((q) => ({
+      ...slice.items.map((q) => ({
         label: q.title.slice(0, 100),
         value: q.id,
         default: q.id === selectedId,
       })),
     ),
+  )
+  addPageRow(
+    components,
+    slice,
+    { prev: ED_PAGE_PREV, next: ED_PAGE_NEXT },
+    `${slice.page}:${selectedId}`,
   )
 
   if (selected && settings) {
@@ -61,7 +71,7 @@ export function buildEditorPanel(
 
   const lines = ['🛠 **編集権限の設定**']
   if (!selected) {
-    lines.push('設定するクイズを選んでください。')
+    lines.push(`設定するクイズを選んでください。（${pageLabel(slice)}）`)
   } else {
     lines.push(`対象: ${selected.title}`, '')
     if (settings?.guildAllowed) {

@@ -1,12 +1,12 @@
 import type { BuzzRankingEntry, MemberStats, QuizStats, RankingEntry } from '@quiz-bot/core'
 import { Button, Components, Select } from 'discord-hono'
+import { addPageRow, pageLabel, paginate } from '../paging'
 
 // ── コンポーネントのハンドラキー ──
 export const QS_SELECT = 'qss' // クイズ選択プルダウン
 export const QS_PAGE_PREV = 'qspp' // 前ページ（custom_id data = page:invokerId）
 export const QS_PAGE_NEXT = 'qspn' // 次ページ（同上）
 
-export const PAGE_SIZE = 25
 export const RANKING_LIMIT = 10
 const MAX_CONTENT = 1900
 const BODY_MAX = 60
@@ -50,14 +50,11 @@ export function buildStatsPanel(
   allQuizzes: { id: string; title: string; description: string | null }[],
   state: StatsPanelState,
 ): { content: string; components: Components } {
-  const totalPages = Math.max(1, Math.ceil(allQuizzes.length / PAGE_SIZE))
-  const page = Math.min(Math.max(0, state.page), totalPages - 1)
-  const pageItems = allQuizzes.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
-
+  const slice = paginate(allQuizzes, state.page)
   const components = new Components()
   components.row(
     new Select(QS_SELECT, 'String').options(
-      ...pageItems.map((q) => ({
+      ...slice.items.map((q) => ({
         label: q.title.slice(0, 100),
         value: q.id,
         ...(q.description ? { description: q.description.slice(0, 100) } : {}),
@@ -65,19 +62,16 @@ export function buildStatsPanel(
     ),
   )
 
-  if (allQuizzes.length > PAGE_SIZE) {
-    const data = `${page}:${state.invokerId}`
-    components.row(
-      new Button(QS_PAGE_PREV, '◀ 前へ', 'Secondary').custom_id(data).disabled(page <= 0),
-      new Button(QS_PAGE_NEXT, '次へ ▶', 'Secondary')
-        .custom_id(data)
-        .disabled(page >= totalPages - 1),
-    )
-  }
+  addPageRow(
+    components,
+    slice,
+    { prev: QS_PAGE_PREV, next: QS_PAGE_NEXT },
+    `${slice.page}:${state.invokerId}`,
+  )
 
   const content = [
     '📊 **クイズの統計**',
-    `統計を見たいクイズを選んでください。（${allQuizzes.length}件中 ${page + 1}/${totalPages}ページ）`,
+    `統計を見たいクイズを選んでください。（${pageLabel(slice)}）`,
   ].join('\n')
 
   return { content, components }

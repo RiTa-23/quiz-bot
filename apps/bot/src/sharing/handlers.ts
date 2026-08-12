@@ -10,6 +10,7 @@ import {
 import type { CommandContext, ComponentContext, ModalContext } from 'discord-hono'
 import { actorFromInteraction } from '../actor'
 import type { Bindings } from '../env'
+import { pageOf } from '../paging'
 import {
   KEYWORD_INPUT,
   PUB_SEARCH_OPEN,
@@ -123,8 +124,24 @@ export async function handleVisSelect(c: ComponentContext<{ Bindings: Bindings }
   const actor = actorFromInteraction(c.interaction)
   const db = createDb(c.env.DB)
   const quizzes = await listOwnedQuizzes(db, actor)
-  return c.resUpdate(buildVisibilityPanel(quizzes, selectValue(c)))
+  const selectedId = selectValue(c)
+  return c.resUpdate(buildVisibilityPanel(quizzes, selectedId, pageOf(quizzes, selectedId)))
 }
+
+/** ページ送り。選択中のクイズは維持したままページだけ動かす。 */
+async function changeVisPage(c: ComponentContext<{ Bindings: Bindings }>, delta: number) {
+  const [pageStr, selectedId = ''] = (c.var.custom_id ?? '').split(':')
+  const actor = actorFromInteraction(c.interaction)
+  const db = createDb(c.env.DB)
+  const quizzes = await listOwnedQuizzes(db, actor)
+  const page = (Number.parseInt(pageStr ?? '0', 10) || 0) + delta
+  return c.resUpdate(buildVisibilityPanel(quizzes, selectedId, page))
+}
+
+export const handleVisPagePrev = (c: ComponentContext<{ Bindings: Bindings }>) =>
+  changeVisPage(c, -1)
+export const handleVisPageNext = (c: ComponentContext<{ Bindings: Bindings }>) =>
+  changeVisPage(c, 1)
 
 async function setVisibility(
   c: ComponentContext<{ Bindings: Bindings }>,

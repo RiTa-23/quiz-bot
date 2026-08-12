@@ -1,4 +1,5 @@
 import { Button, Components, Modal, Select, TextInput } from 'discord-hono'
+import { addPageRow, paginate } from '../paging'
 
 // ── コンポーネントのハンドラキー ──
 export const AQ_QUIZ_SELECT = 'aqs' // クイズ選択プルダウン
@@ -15,8 +16,6 @@ export const IN_BODY = 'body'
 export const IN_CHOICES = 'choices'
 export const IN_ANSWERS = 'answers'
 export const IN_EXPLANATION = 'explanation'
-
-export const PAGE_SIZE = 25
 
 export const TF_MARU = '○'
 export const TF_BATSU = '×'
@@ -41,15 +40,12 @@ export function buildAddQuestionPanel(
   allQuizzes: { id: string; title: string; description: string | null }[],
   state: AddQuestionState,
 ): { content: string; components: Components } {
-  const totalPages = Math.max(1, Math.ceil(allQuizzes.length / PAGE_SIZE))
-  const page = Math.min(Math.max(0, state.page), totalPages - 1)
-  const pageItems = allQuizzes.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
-
+  const slice = paginate(allQuizzes, state.page)
   const components = new Components()
 
   components.row(
     new Select(AQ_QUIZ_SELECT, 'String').options(
-      ...pageItems.map((q) => ({
+      ...slice.items.map((q) => ({
         label: q.title.slice(0, 100),
         value: q.id,
         default: q.id === state.quizId,
@@ -58,12 +54,7 @@ export function buildAddQuestionPanel(
     ),
   )
 
-  if (allQuizzes.length > PAGE_SIZE) {
-    components.row(
-      new Button(AQ_PAGE_PREV, '◀ 前へ', 'Secondary').disabled(page <= 0),
-      new Button(AQ_PAGE_NEXT, '次へ ▶', 'Secondary').disabled(page >= totalPages - 1),
-    )
-  }
+  addPageRow(components, slice, { prev: AQ_PAGE_PREV, next: AQ_PAGE_NEXT })
 
   components.row(
     new Select(AQ_TYPE_SELECT, 'String').options(
@@ -85,7 +76,7 @@ export function buildAddQuestionPanel(
 
   components.row(
     new Button(AQ_OPEN, '📝 設問を入力', 'Success').custom_id(
-      `${state.quizId}:${state.type}:${page}:${state.tf}`,
+      `${state.quizId}:${state.type}:${slice.page}:${state.tf}`,
     ),
   )
 
