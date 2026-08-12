@@ -33,7 +33,8 @@ import type {
 
 const PAGE_SIZE = 25
 const MAX_COUNT = 50
-const BUZZ_TIMEOUT_MS = 10 * 60 * 1000
+const BUZZ_TIMEOUT_MS = 60 * 1000
+const LOBBY_TIMEOUT_MS = 10 * 60 * 1000
 const TRUE_FALSE_CHOICES = ['○', '×']
 
 type SessionQuestion = {
@@ -278,6 +279,8 @@ export class QuizSession extends DurableObject<Bindings> {
     s.messageId = messageId
     s.participants = [s.hostUserId]
     await this.save()
+    // 放置された募集がチャンネルを占有し続けないよう期限を切る
+    await this.ctx.storage.setAlarm(Date.now() + LOBBY_TIMEOUT_MS)
     return { ok: true, view: await this.lobbyView() }
   }
 
@@ -479,10 +482,25 @@ export class QuizSession extends DurableObject<Bindings> {
     s.pending = []
   }
 
+  /** 募集の期限切れ。セッションを畳んでチャンネルを解放する。 */
+  private async expireLobby(): Promise<void> {
+    const s = this.state as State
+    s.status = 'finished'
+    await this.save()
+    if (!s.messageId) return
+    await editChannelMessage(this.env.DISCORD_TOKEN, s.channelId, s.messageId, {
+      content:
+        '⏰ 参加者が集まらなかったため募集を終了しました。もう一度 `/quiz play` から始めてください。',
+      components: [],
+    })
+  }
+
   /** 早押しの制限時間切れ。正解者なしで締め切り、次の問題を投稿する。 */
   async alarm(): Promise<void> {
     const s = this.state
-    if (!s || s.status !== 'active' || s.mode !== 'buzz' || s.buzzClosed) return
+    if (!s) return
+    if (s.status === 'lobby') return this.expireLobby()
+    if (s.status !== 'active' || s.mode !== 'buzz' || s.buzzClosed) return
     s.buzzClosed = true
     await this.flushPending()
     const next = this.buildNext()
