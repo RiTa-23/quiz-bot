@@ -1,5 +1,6 @@
 import type { PublicQuizListing } from '@quiz-bot/core'
 import { Button, Components, Modal, Select, TextInput } from 'discord-hono'
+import { addPageRow, pageLabel, paginate } from '../paging'
 
 // ── コンポーネントのハンドラキー ──
 export const PUB_SELECT = 'pbs' // 公開クイズ選択プルダウン
@@ -10,6 +11,8 @@ export const RM_SELECT = 'rms' // 追加済みクイズの取り外しプルダ�
 export const VIS_SELECT = 'vss' // 公開設定を変えるクイズの選択
 export const VIS_PUBLIC = 'vsp' // 公開にする（custom_id data = quizId）
 export const VIS_PRIVATE = 'vsl' // サーバー限定にする（custom_id data = quizId）
+export const VIS_PAGE_PREV = 'vspp' // 前ページ（custom_id data = page:quizId）
+export const VIS_PAGE_NEXT = 'vspn' // 次ページ（同上）
 
 export const KEYWORD_INPUT = 'keyword'
 const LIST_LIMIT = 25
@@ -21,23 +24,34 @@ export type OwnedQuiz = { id: string; title: string; visibility: 'private' | 'pu
 export const visibilityLabel = (v: 'private' | 'public') =>
   v === 'public' ? '🌐 公開' : '🔒 サーバー限定'
 
-/** 公開設定パネル。選択中のクイズIDはボタンの custom_id に保持する。 */
+/**
+ * 公開設定パネル。選択中のクイズIDとページはボタンの custom_id に保持する。
+ * 選択済みクイズは現在のページに無くても対象として扱う（ページを送っても選択が外れない）。
+ */
 export function buildVisibilityPanel(
   quizzes: OwnedQuiz[],
   selectedId: string,
+  page = 0,
 ): { content: string; components: Components } {
   const components = new Components()
   const selected = quizzes.find((q) => q.id === selectedId)
+  const slice = paginate(quizzes, page)
 
   components.row(
     new Select(VIS_SELECT, 'String').options(
-      ...quizzes.slice(0, LIST_LIMIT).map((q) => ({
+      ...slice.items.map((q) => ({
         label: q.title.slice(0, 100),
         value: q.id,
         description: visibilityLabel(q.visibility),
         default: q.id === selectedId,
       })),
     ),
+  )
+  addPageRow(
+    components,
+    slice,
+    { prev: VIS_PAGE_PREV, next: VIS_PAGE_NEXT },
+    `${slice.page}:${selectedId}`,
   )
 
   if (selected) {
@@ -55,7 +69,7 @@ export function buildVisibilityPanel(
   if (selected) {
     lines.push(`対象: ${selected.title}`, `現在: ${visibilityLabel(selected.visibility)}`)
   } else {
-    lines.push('設定を変えるクイズを選んでください。')
+    lines.push(`設定を変えるクイズを選んでください。（${pageLabel(slice)}）`)
   }
   lines.push('公開にすると、他のサーバーが `/quiz add-public` で追加できるようになります。')
 

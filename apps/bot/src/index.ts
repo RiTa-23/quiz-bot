@@ -68,16 +68,27 @@ import {
 import {
   handleEdGuildOff,
   handleEdGuildOn,
+  handleEdPageNext,
+  handleEdPagePrev,
   handleEdQuizSelect,
   handleEdUserSelect,
 } from './sharing/editorHandlers'
-import { ED_GUILD_OFF, ED_GUILD_ON, ED_QUIZ_SELECT, ED_USER_SELECT } from './sharing/editorMessages'
+import {
+  ED_GUILD_OFF,
+  ED_GUILD_ON,
+  ED_PAGE_NEXT,
+  ED_PAGE_PREV,
+  ED_QUIZ_SELECT,
+  ED_USER_SELECT,
+} from './sharing/editorMessages'
 import {
   handlePubClear,
   handlePubSearchModal,
   handlePubSearchOpen,
   handlePubSelect,
   handleRmSelect,
+  handleVisPageNext,
+  handleVisPagePrev,
   handleVisPrivate,
   handleVisPublic,
   handleVisSelect,
@@ -88,6 +99,8 @@ import {
   PUB_SEARCH_OPEN,
   PUB_SELECT,
   RM_SELECT,
+  VIS_PAGE_NEXT,
+  VIS_PAGE_PREV,
   VIS_PRIVATE,
   VIS_PUBLIC,
   VIS_SELECT,
@@ -168,6 +181,8 @@ app.component(DQ_CANCEL, (c) => guard(c, () => handleDqCancel(c), true))
 app.component(VIS_SELECT, (c) => guard(c, () => handleVisSelect(c), true))
 app.component(VIS_PUBLIC, (c) => guard(c, () => handleVisPublic(c), true))
 app.component(VIS_PRIVATE, (c) => guard(c, () => handleVisPrivate(c), true))
+app.component(VIS_PAGE_PREV, (c) => guard(c, () => handleVisPagePrev(c), true))
+app.component(VIS_PAGE_NEXT, (c) => guard(c, () => handleVisPageNext(c), true))
 app.component(PUB_SELECT, (c) => guard(c, () => handlePubSelect(c), true))
 app.component(PUB_SEARCH_OPEN, (c) => guard(c, () => handlePubSearchOpen(c), true))
 app.modal(PUB_SEARCH_MODAL, (c) => guard(c, () => handlePubSearchModal(c), true))
@@ -179,6 +194,8 @@ app.component(ED_QUIZ_SELECT, (c) => guard(c, () => handleEdQuizSelect(c), true)
 app.component(ED_GUILD_ON, (c) => guard(c, () => handleEdGuildOn(c), true))
 app.component(ED_GUILD_OFF, (c) => guard(c, () => handleEdGuildOff(c), true))
 app.component(ED_USER_SELECT, (c) => guard(c, () => handleEdUserSelect(c), true))
+app.component(ED_PAGE_PREV, (c) => guard(c, () => handleEdPagePrev(c), true))
+app.component(ED_PAGE_NEXT, (c) => guard(c, () => handleEdPageNext(c), true))
 
 // 統計GUI
 app.component(QS_SELECT, (c) => guard(c, () => handleQsSelect(c), true))

@@ -8,18 +8,36 @@ import {
 import type { CommandContext, ComponentContext } from 'discord-hono'
 import { actorFromInteraction } from '../actor'
 import type { Bindings } from '../env'
+import { pageOf } from '../paging'
 import { NO_PING, buildEditorPanel } from './editorMessages'
 
 const GUILD_ONLY = 'この操作はサーバー内で実行してください。'
 
 /** 現在の設定を読み直してパネルを描き直す。 */
-async function renderPanel(c: ComponentContext<{ Bindings: Bindings }>, quizId: string) {
+async function renderPanel(
+  c: ComponentContext<{ Bindings: Bindings }>,
+  quizId: string,
+  page?: number,
+) {
   const actor = actorFromInteraction(c.interaction)
   const db = createDb(c.env.DB)
   const quizzes = await listOwnedQuizzes(db, actor)
   const settings = quizId ? await getEditorSettings(db, actor, quizId) : null
-  return { ...buildEditorPanel(quizzes, quizId, settings), ...NO_PING }
+  return {
+    ...buildEditorPanel(quizzes, quizId, settings, page ?? pageOf(quizzes, quizId)),
+    ...NO_PING,
+  }
 }
+
+/** ページ送り。選択中のクイズは維持したままページだけ動かす。 */
+async function changeEdPage(c: ComponentContext<{ Bindings: Bindings }>, delta: number) {
+  const [pageStr, quizId = ''] = (c.var.custom_id ?? '').split(':')
+  const page = (Number.parseInt(pageStr ?? '0', 10) || 0) + delta
+  return c.resUpdate(await renderPanel(c, quizId, page))
+}
+
+export const handleEdPagePrev = (c: ComponentContext<{ Bindings: Bindings }>) => changeEdPage(c, -1)
+export const handleEdPageNext = (c: ComponentContext<{ Bindings: Bindings }>) => changeEdPage(c, 1)
 
 /** /quiz editors: 編集権限の設定パネルを開く（作成者のみ）。 */
 export async function handleEditorsCommand(c: CommandContext<{ Bindings: Bindings }>) {
