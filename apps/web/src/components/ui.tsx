@@ -29,7 +29,7 @@ export function Button({
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded border border-paper-line bg-paper-raised p-4 shadow-panel ${className}`}
+      className={`min-w-0 rounded border border-paper-line bg-paper-raised p-4 shadow-panel ${className}`}
     >
       {children}
     </div>
