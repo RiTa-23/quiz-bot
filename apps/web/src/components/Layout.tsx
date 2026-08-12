@@ -6,7 +6,7 @@ import { ErrorNote, Select } from './ui'
 
 // 現在地は下辺の金の罫で示す。塗りつぶしより盤面の落ち着きを保てる
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  `border-b-2 px-3 py-3 text-sm font-bold transition ${
+  `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-bold transition ${
     isActive
       ? 'border-gold-400 text-paper'
       : 'border-transparent text-navy-200 hover:border-navy-300 hover:text-paper'
@@ -33,10 +33,10 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-paper">
       <header className="border-b-4 border-gold-400 bg-navy-900">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-4 px-4">
-          <span className="py-3 font-bold tracking-tight text-paper">
+          <span className="whitespace-nowrap py-3 font-bold tracking-tight text-paper">
             <span className="text-gold-400">Q.</span> クイズ管理
           </span>
-          <nav className="flex gap-1">
+          <nav className="flex gap-1 overflow-x-auto">
             <NavLink to="/quizzes" className={navClass}>
               クイズ
             </NavLink>
@@ -47,12 +47,12 @@ export function Layout({ children }: { children: ReactNode }) {
               統計
             </NavLink>
           </nav>
-          <div className="ml-auto flex items-center gap-3 py-2">
+          <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3 py-2">
             {me.guilds.length > 0 ? (
               <Select
                 value={guildId ?? ''}
                 onChange={(e) => setGuildId(e.target.value)}
-                className="max-w-48"
+                className="min-w-0 max-w-48"
               >
                 {me.guilds.map((g) => (
                   <option key={g.id} value={g.id}>
@@ -61,11 +61,13 @@ export function Layout({ children }: { children: ReactNode }) {
                 ))}
               </Select>
             ) : null}
-            <span className="text-sm text-navy-200">{me.displayName || me.username}</span>
+            <span className="max-w-32 truncate text-sm text-navy-200 sm:max-w-none">
+              {me.displayName || me.username}
+            </span>
             <button
               type="button"
               onClick={onLogout}
-              className="text-sm text-navy-200 underline-offset-2 hover:text-paper hover:underline"
+              className="shrink-0 whitespace-nowrap text-sm text-navy-200 underline-offset-2 hover:text-paper hover:underline"
             >
               ログアウト
             </button>

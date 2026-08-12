@@ -73,14 +73,20 @@ export function QuizDetailPage() {
           ← クイズ一覧
         </Link>
         <div className="mt-2 flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl text-navy-900">{data.title}</h1>
-            {data.description && <p className="mt-1 text-navy-300">{data.description}</p>}
+          <div className="min-w-0">
+            <h1 className="break-words text-2xl text-navy-900">{data.title}</h1>
+            {data.description && (
+              <p className="mt-1 break-words text-navy-300">{data.description}</p>
+            )}
             <p className="mt-1 text-xs text-navy-200">
               <AuthorLabel author={data.authors[data.ownerUserId]} authorId={data.ownerUserId} />
             </p>
           </div>
-          {data.visibility === 'public' && <Badge tone="gold">公開</Badge>}
+          {data.visibility === 'public' && (
+            <div className="shrink-0">
+              <Badge tone="gold">公開</Badge>
+            </div>
+          )}
         </div>
       </div>
 
@@ -94,7 +100,7 @@ export function QuizDetailPage() {
 
       {/* 設問 */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="rule-gold text-lg">設問（{data.questions.length}）</h2>
           {canEdit && !adding && <Button onClick={() => setAdding(true)}>＋ 設問を追加</Button>}
         </div>
@@ -216,7 +222,7 @@ function QuestionRow({
             </span>
             <AuthorLabel author={author} authorId={authorId} />
           </p>
-          <p className="text-navy-900">{question.body}</p>
+          <p className="break-words text-navy-900">{question.body}</p>
           {question.choices && (
             <p className="mt-1 text-sm text-navy-300">{question.choices.join(' / ')}</p>
           )}

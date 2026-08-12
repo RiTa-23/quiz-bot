@@ -46,7 +46,7 @@ export function PublicQuizzesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl">公開クイズ（{guildName(guildId)} に追加）</h1>
+      <h1 className="break-words text-2xl">公開クイズ（{guildName(guildId)} に追加）</h1>
       {actionError && <ErrorNote message={actionError} />}
 
       <div className="flex gap-2">
@@ -84,7 +84,7 @@ export function PublicQuizzesPage() {
           </p>
         )}
         {data?.map((q) => (
-          <Card key={q.id} className="flex items-center justify-between gap-3">
+          <Card key={q.id} className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate font-medium">{q.title}</p>
               <p className="text-sm text-navy-300">
@@ -101,12 +101,12 @@ export function PublicQuizzesPage() {
         <section className="space-y-2">
           <h2 className="text-xs font-bold uppercase tracking-wider text-navy-300">追加済み</h2>
           {added.data.map((q) => (
-            <Card key={q.id} className="flex items-center justify-between gap-3">
+            <Card key={q.id} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-medium">{q.title}</p>
                 <p className="text-sm text-navy-300">{q.questionCount}問</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <Badge tone="green">追加済み</Badge>
                 <Button variant="secondary" onClick={() => remove(q.id)}>
                   外す
