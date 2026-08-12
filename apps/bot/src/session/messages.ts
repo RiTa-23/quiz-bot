@@ -174,7 +174,8 @@ function answerComponents(q: PublicSessionQuestion, messageId: string): Componen
   } else if (q.type === 'true_false') {
     components.row(
       new Button(SESSION_ANSWER, TRUE_FALSE_LABELS[0] ?? '○', 'Success').custom_id(`${q.id}:0`),
-      new Button(SESSION_ANSWER, TRUE_FALSE_LABELS[1] ?? '×', 'Danger').custom_id(`${q.id}:1`),
+      // ❌ は絵文字自体が赤いため、Danger(赤)だと背景と同化する
+      new Button(SESSION_ANSWER, TRUE_FALSE_LABELS[1] ?? '×', 'Primary').custom_id(`${q.id}:1`),
     )
   } else {
     components.row(

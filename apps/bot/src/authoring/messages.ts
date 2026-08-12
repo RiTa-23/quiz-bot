@@ -70,7 +70,7 @@ export function buildAddQuestionPanel(
   if (state.type === 'true_false') {
     components.row(
       new Button(AQ_TF_MARU, '正解: ⭕', state.tf === TF_MARU ? 'Success' : 'Secondary'),
-      new Button(AQ_TF_BATSU, '正解: ❌', state.tf === TF_BATSU ? 'Danger' : 'Secondary'),
+      new Button(AQ_TF_BATSU, '正解: ❌', state.tf === TF_BATSU ? 'Primary' : 'Secondary'),
     )
   }
 
