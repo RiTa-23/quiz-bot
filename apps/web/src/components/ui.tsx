@@ -56,16 +56,25 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 const inputBase =
   'w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
 
-export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={inputBase} {...props} />
+export function TextInput({
+  className = '',
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={`${inputBase} ${className}`} {...props} />
 }
 
-export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={`${inputBase} min-h-20`} {...props} />
+export function TextArea({
+  className = '',
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea className={`${inputBase} min-h-20 ${className}`} {...props} />
 }
 
-export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={inputBase} {...props} />
+export function Select({
+  className = '',
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={`${inputBase} ${className}`} {...props} />
 }
 
 export function Badge({
