@@ -6,6 +6,7 @@ export type Me = {
   userId: string
   username: string
   guilds: { id: string; name: string }[]
+  botInstallUrl: string
 }
 
 export type Quiz = {

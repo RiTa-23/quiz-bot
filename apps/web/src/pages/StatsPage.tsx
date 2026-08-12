@@ -8,8 +8,15 @@ const pct = (correct: number, total: number) =>
   total > 0 ? `${Math.round((correct / total) * 100)}%` : '—'
 
 export function StatsPage() {
-  const { me, guildId, guildName } = useGuild()
-  if (!guildId) return <NoGuildNotice hasGuilds={me.guilds.length > 0} />
+  const { me, guildId, guildName, reloadMe } = useGuild()
+  if (!guildId)
+    return (
+      <NoGuildNotice
+        hasGuilds={me.guilds.length > 0}
+        installUrl={me.botInstallUrl}
+        onRefresh={reloadMe}
+      />
+    )
 
   return (
     <div className="space-y-6">

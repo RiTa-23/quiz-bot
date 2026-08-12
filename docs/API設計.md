@@ -15,10 +15,12 @@
 ### `GET /api/me`
 ログイン状態と、操作対象に選べるサーバー一覧を返す。未ログインは `401 UNAUTHORIZED`。
 
-- Response: `{ userId, username, guilds: { id, name }[] }`
+- Query: `refresh=1`（任意）— Bot 参加サーバーのキャッシュを無視して取り直す。Bot 導入直後に反映を待たせないための導線で、常用しない
+- Response: `{ userId, username, guilds: { id, name }[], botInstallUrl }`
 - `guilds` は「**ユーザーが所属し、かつ Bot が導入済み**」のサーバーのみ。Web の画面上部のサーバー選択に使う（Bot 未導入のサーバーを選んでも出題・記録ができないため候補に出さない）
-- Bot の参加サーバーは Bot トークンで `/users/@me/guilds` を引いて判定し、Discord のレート制限を避けるため KV に 5 分キャッシュする（`bot:guild_ids`）
+- Bot の参加サーバーは Bot トークンで `/users/@me/guilds` を引いて判定し、Discord のレート制限を避けるため KV に 1 分キャッシュする（`bot:guild_ids`）
 - Bot トークン未設定や取得失敗時は**絞り込まずに全所属サーバーを返す**（一覧が引けないことを理由に操作を止めない）
+- `botInstallUrl` は Bot 導入用の OAuth2 URL（`scope=bot applications.commands` / `permissions=3072`）。スコープや権限値を Web 側に持たせないようサーバーで組み立てる
 
 > セッションに保存するのは**ユーザーの全所属サーバー**で、絞り込みはこのエンドポイントの応答のみに適用する。所属検証（後述）は「ユーザーがそのサーバーのメンバーか」を見るものであり、Bot の導入有無とは別の軸。こうすることで、Bot が後から抜けたサーバーのクイズでも作成者の管理操作は壊れない。
 

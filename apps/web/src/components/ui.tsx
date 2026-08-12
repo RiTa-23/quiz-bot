@@ -43,7 +43,11 @@ export function ErrorNote({ message }: { message: string }) {
   )
 }
 
-export function NoGuildNotice({ hasGuilds }: { hasGuilds: boolean }) {
+export function NoGuildNotice({
+  hasGuilds,
+  installUrl,
+  onRefresh,
+}: { hasGuilds: boolean; installUrl?: string; onRefresh?: () => void }) {
   return (
     <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
       {hasGuilds ? (
@@ -52,8 +56,25 @@ export function NoGuildNotice({ hasGuilds }: { hasGuilds: boolean }) {
         <>
           <p className="font-medium">利用できるサーバーがありません。</p>
           <p className="mt-1">
-            クイズBotが導入されているサーバーのみ選べます。Botを導入したうえで、もう一度ログインし直してください。
+            クイズBotが導入されているサーバーのみ選べます。下のリンクからBotを追加してください。
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {installUrl && (
+              <a
+                href={installUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+              >
+                Botをサーバーに追加する
+              </a>
+            )}
+            {onRefresh && (
+              <Button variant="secondary" onClick={onRefresh}>
+                追加したら再読み込み
+              </Button>
+            )}
+          </div>
         </>
       )}
     </div>

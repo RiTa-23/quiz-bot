@@ -1,4 +1,5 @@
 import { type ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { api } from './api'
 import type { Me } from './types'
 
 type GuildContextValue = {
@@ -6,13 +7,18 @@ type GuildContextValue = {
   guildId: string | null
   setGuildId: (id: string) => void
   guildName: (id: string) => string
+  reloadMe: () => void
 }
 
 const GuildContext = createContext<GuildContextValue | null>(null)
 
 const STORAGE_KEY = 'quizbot.guildId'
 
-export function GuildProvider({ me, children }: { me: Me; children: ReactNode }) {
+export function GuildProvider({
+  me,
+  reload,
+  children,
+}: { me: Me; reload: () => void; children: ReactNode }) {
   const [guildId, setGuildIdState] = useState<string | null>(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved && me.guilds.some((g) => g.id === saved)) return saved
@@ -35,8 +41,13 @@ export function GuildProvider({ me, children }: { me: Me; children: ReactNode })
         setGuildIdState(id)
       },
       guildName: (id: string) => me.guilds.find((g) => g.id === id)?.name ?? id,
+      // 先にサーバー側のBot参加サーバーのキャッシュを更新してから読み直す（Bot導入直後の反映用）
+      reloadMe: async () => {
+        await api.get('/api/me?refresh=1').catch(() => {})
+        reload()
+      },
     }),
-    [me, guildId],
+    [me, guildId, reload],
   )
 
   return <GuildContext.Provider value={value}>{children}</GuildContext.Provider>

@@ -2,7 +2,7 @@ import type { Bindings } from './env'
 
 const DISCORD_API = 'https://discord.com/api/v10'
 const CACHE_KEY = 'bot:guild_ids'
-const CACHE_TTL_SECONDS = 300
+const CACHE_TTL_SECONDS = 60
 const PAGE_LIMIT = 200
 const MAX_PAGES = 50
 
@@ -10,12 +10,19 @@ const MAX_PAGES = 50
  * Botが参加しているサーバーIDの集合。Discordのレート制限を避けるためKVに短時間キャッシュする。
  * 取得できない場合は null を返し、呼び出し側は「絞り込まない」フォールバックを取る
  * （Botの一覧が引けないことを理由にユーザーの操作を止めない）。
+ *
+ * forceRefresh: Bot導入直後にキャッシュ切れを待たせないための明示的な再取得。
  */
-export async function fetchBotGuildIds(env: Bindings): Promise<Set<string> | null> {
+export async function fetchBotGuildIds(
+  env: Bindings,
+  opts: { forceRefresh?: boolean } = {},
+): Promise<Set<string> | null> {
   if (!env.DISCORD_TOKEN) return null
 
-  const cached = await env.SESSIONS.get(CACHE_KEY)
-  if (cached) return new Set(JSON.parse(cached) as string[])
+  if (!opts.forceRefresh) {
+    const cached = await env.SESSIONS.get(CACHE_KEY)
+    if (cached) return new Set(JSON.parse(cached) as string[])
+  }
 
   const ids: string[] = []
   let after: string | undefined

@@ -6,7 +6,7 @@ import { useApi } from '../lib/hooks'
 import type { PublicQuizListing } from '../lib/types'
 
 export function PublicQuizzesPage() {
-  const { me, guildId, guildName } = useGuild()
+  const { me, guildId, guildName, reloadMe } = useGuild()
   const [keyword, setKeyword] = useState('')
   const [applied, setApplied] = useState('')
 
@@ -19,7 +19,14 @@ export function PublicQuizzesPage() {
   )
   const [actionError, setActionError] = useState<string | null>(null)
 
-  if (!guildId) return <NoGuildNotice hasGuilds={me.guilds.length > 0} />
+  if (!guildId)
+    return (
+      <NoGuildNotice
+        hasGuilds={me.guilds.length > 0}
+        installUrl={me.botInstallUrl}
+        onRefresh={reloadMe}
+      />
+    )
 
   const run = async (fn: () => Promise<unknown>) => {
     setActionError(null)

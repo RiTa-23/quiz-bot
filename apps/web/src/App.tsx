@@ -12,7 +12,7 @@ import { StatsPage } from './pages/StatsPage'
 
 /** ログイン必須の領域。/api/me でセッションを確認し、guildコンテキストを供給する。 */
 function AuthedApp() {
-  const { data: me, loading, unauthorized, error } = useApi<Me>('/api/me')
+  const { data: me, loading, unauthorized, error, reload } = useApi<Me>('/api/me')
 
   if (unauthorized) return <Navigate to="/login" replace />
   if (loading) return <Spinner />
@@ -24,7 +24,7 @@ function AuthedApp() {
     )
 
   return (
-    <GuildProvider me={me}>
+    <GuildProvider me={me} reload={reload}>
       <Layout>
         <Routes>
           <Route path="/quizzes" element={<QuizListPage />} />

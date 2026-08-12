@@ -24,13 +24,20 @@ const ROLE_LABEL: Record<string, string> = {
 }
 
 export function QuizListPage() {
-  const { me, guildId, guildName } = useGuild()
+  const { me, guildId, guildName, reloadMe } = useGuild()
   const { data, loading, error, reload } = useApi<Quiz[]>(
     guildId ? `/api/quizzes?guild_id=${guildId}` : null,
   )
   const [creating, setCreating] = useState(false)
 
-  if (!guildId) return <NoGuildNotice hasGuilds={me.guilds.length > 0} />
+  if (!guildId)
+    return (
+      <NoGuildNotice
+        hasGuilds={me.guilds.length > 0}
+        installUrl={me.botInstallUrl}
+        onRefresh={reloadMe}
+      />
+    )
 
   return (
     <div className="space-y-4">
