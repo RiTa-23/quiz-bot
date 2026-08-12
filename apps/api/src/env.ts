@@ -8,6 +8,9 @@ export type Bindings = {
   DISCORD_CLIENT_SECRET: string
 }
 
+import type { SessionGuild } from './auth'
+
 export type Variables = {
   userId: string
+  guilds: SessionGuild[]
 }
