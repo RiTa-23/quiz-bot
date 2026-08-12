@@ -4,6 +4,7 @@ import {
   Badge,
   Button,
   Card,
+  EmptyNote,
   ErrorNote,
   Field,
   NoGuildNotice,
@@ -61,14 +62,17 @@ export function QuizListPage() {
       {loading && <Spinner />}
       {error && <ErrorNote message={error} />}
       {data && data.length === 0 && (
-        <p className="text-sm text-navy-300">まだクイズがありません。「新規作成」から作れます。</p>
+        <EmptyNote>まだクイズがありません。「＋ 新規作成」から作れます。</EmptyNote>
       )}
       {data && data.length > 0 && (
-        <ul className="divide-y divide-paper-line rounded border border-paper-line bg-paper-raised shadow-panel">
+        <ul className="divide-y divide-paper-line overflow-hidden rounded border border-paper-line bg-paper-raised shadow-panel">
           {data.map((q) => (
-            <li key={q.id} className="p-4 hover:bg-paper">
-              <Link to={`/quizzes/${q.id}`} className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
+            <li key={q.id}>
+              <Link
+                to={`/quizzes/${q.id}`}
+                className="group flex items-center gap-3 p-4 transition hover:bg-paper focus-visible:bg-paper"
+              >
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-navy-900">{q.title}</p>
                   {q.description && (
                     <p className="truncate text-sm text-navy-300">{q.description}</p>
@@ -78,6 +82,12 @@ export function QuizListPage() {
                   {q.visibility === 'public' && <Badge tone="gold">公開</Badge>}
                   <Badge tone={q.isOwner ? 'green' : 'gray'}>{ROLE_LABEL[q.role] ?? q.role}</Badge>
                 </div>
+                <span
+                  aria-hidden
+                  className="shrink-0 text-navy-200 transition group-hover:translate-x-0.5 group-hover:text-gold-500"
+                >
+                  ›
+                </span>
               </Link>
             </li>
           ))}

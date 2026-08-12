@@ -53,7 +53,7 @@ export function EditorSettingsCard({ quizId, guildId }: { quizId: string; guildI
 
   return (
     <Card className="space-y-3">
-      <h2 className="text-lg font-medium">編集権限</h2>
+      <h2 className="rule-gold text-lg">編集権限</h2>
 
       <label className="flex items-center gap-2 text-sm">
         <input

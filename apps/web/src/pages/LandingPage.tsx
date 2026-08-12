@@ -71,8 +71,13 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-paper">
-      <header className="border-b-4 border-gold-400 bg-navy-900">
-        <div className="mx-auto max-w-4xl px-4 py-16 sm:py-24">
+      <header className="relative overflow-hidden border-b-4 border-gold-400 bg-navy-900">
+        {/* 上方からの金のスポットライト。番組ステージのような奥行きを出す装飾 */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 -top-24 h-64 bg-[radial-gradient(60%_100%_at_50%_0%,rgba(232,179,65,0.18),transparent_70%)]"
+        />
+        <div className="relative mx-auto max-w-4xl px-4 py-16 sm:py-24">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold-400">Quiz Bot</p>
           <h1 className="mt-3 text-3xl leading-tight text-paper sm:text-5xl">
             Discordで、

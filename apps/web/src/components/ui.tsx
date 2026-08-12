@@ -37,7 +37,23 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
 }
 
 export function Spinner({ label = '読み込み中…' }: { label?: string }) {
-  return <p className="p-6 text-sm text-navy-300">{label}</p>
+  return (
+    <div className="flex items-center gap-2 p-6 text-sm text-navy-300">
+      <span
+        aria-hidden
+        className="h-4 w-4 animate-spin rounded-full border-2 border-paper-line border-t-gold-400"
+      />
+      <span>{label}</span>
+    </div>
+  )
+}
+
+export function EmptyNote({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded border border-dashed border-paper-line bg-paper-sunken/50 px-4 py-6 text-center text-sm text-navy-300">
+      {children}
+    </div>
+  )
 }
 
 export function ErrorNote({ message }: { message: string }) {

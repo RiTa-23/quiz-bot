@@ -13,6 +13,17 @@
   h3 {
     @apply font-bold tracking-tight;
   }
+
+  /* チェックボックス・ラジオを盤面の金に揃える（既定の青は配色から浮くため） */
+  input[type='checkbox'],
+  input[type='radio'] {
+    @apply h-4 w-4 accent-gold-500;
+  }
+
+  /* キーボード操作時のフォーカスを金の輪で統一する。マウス操作では出さない */
+  :focus-visible {
+    @apply outline-none ring-2 ring-gold-400 ring-offset-1 ring-offset-paper;
+  }
 }
 
 @layer components {

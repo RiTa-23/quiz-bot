@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   Card,
+  EmptyNote,
   ErrorNote,
   Field,
   Spinner,
@@ -112,7 +113,11 @@ export function QuizDetailPage() {
         )}
 
         {data.questions.length === 0 && !adding && (
-          <p className="text-sm text-navy-300">まだ設問がありません。</p>
+          <EmptyNote>
+            {canEdit
+              ? 'まだ設問がありません。「＋ 設問を追加」から作れます。'
+              : 'まだ設問がありません。'}
+          </EmptyNote>
         )}
 
         <ul className="space-y-3">
