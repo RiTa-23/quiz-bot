@@ -12,6 +12,11 @@
 - `GET /auth/discord/callback` — OAuth2 コールバック、セッション発行。この時に `/users/@me/guilds` を取得し、**所属サーバー一覧をセッションに保存する**
 - `POST /auth/logout` — ログアウト
 
+### `GET /api/bot-install-url`
+Bot導入用のOAuth2 URLを返す。**認証不要**（ルートの紹介ページがログイン前に導入導線を出すため）。
+
+- Response: `{ botInstallUrl }`
+
 ### `GET /api/me`
 ログイン状態と、操作対象に選べるサーバー一覧を返す。未ログインは `401 UNAUTHORIZED`。
 

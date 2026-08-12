@@ -18,6 +18,11 @@ function buildBotInstallUrl(clientId: string): string {
   return url.toString()
 }
 
+/** 紹介ページ用。導入導線はログイン前にも必要なので認証を要求しない。 */
+meRoutes.get('/bot-install-url', (c) =>
+  c.json({ botInstallUrl: buildBotInstallUrl(c.env.DISCORD_CLIENT_ID) }),
+)
+
 /** 一覧は Bot 導入済みに絞る。未導入のサーバーを選んでも出題・記録ができないため。 */
 meRoutes.get('/me', async (c) => {
   const session = await resolveSession(c.env, getCookie(c, SESSION_COOKIE))

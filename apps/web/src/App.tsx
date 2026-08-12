@@ -4,6 +4,7 @@ import { ErrorNote, Spinner } from './components/ui'
 import { GuildProvider } from './lib/GuildContext'
 import { useApi } from './lib/hooks'
 import type { Me } from './lib/types'
+import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { PublicQuizzesPage } from './pages/PublicQuizzesPage'
 import { QuizDetailPage } from './pages/QuizDetailPage'
@@ -40,6 +41,8 @@ function AuthedApp() {
 export function App() {
   return (
     <Routes>
+      {/* ルートは未ログインでも見られる紹介ページ。認証が要るのはその先だけ */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/*" element={<AuthedApp />} />
     </Routes>
