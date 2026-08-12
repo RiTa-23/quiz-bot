@@ -13,10 +13,11 @@
       "migrations_dir": "../../packages/core/migrations"
     }
   ],
-  "kv_namespaces": [{ "binding": "SESSIONS", "id": "<KV_NAMESPACE_ID>" }],
+  "kv_namespaces": [{ "binding": "SESSIONS", "id": "e7e71faf2800432b86f6ab2c005e60d2" }],
+  "routes": [{ "pattern": "quiz-api.ritane.co", "custom_domain": true }],
   "vars": {
-    "ENVIRONMENT": "development",
-    "WEB_ORIGIN": "http://localhost:5173",
-    "DISCORD_OAUTH_REDIRECT_URI": "http://localhost:8787/auth/discord/callback"
+    "ENVIRONMENT": "production",
+    "WEB_ORIGIN": "https://quiz.ritane.co",
+    "DISCORD_OAUTH_REDIRECT_URI": "https://quiz-api.ritane.co/auth/discord/callback"
   }
 }
