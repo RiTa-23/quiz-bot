@@ -109,22 +109,33 @@ const CONTENT: Record<HelpTopic, { summary: string; sections: Section[] }> = {
   },
 }
 
-/** トピック切り替えボタン。選択中は押せなくして現在地を示す。 */
-function topicButtons(current: HelpTopic): Components {
+/**
+ * トピック切り替えボタン。選択中は押せなくして現在地を示す。
+ * 公開/自分だけの別は custom_id に持たせ、切り替え後も案内文が食い違わないようにする。
+ */
+function topicButtons(current: HelpTopic, shared: boolean): Components {
   const components = new Components()
   components.row(
     ...HELP_TOPICS.map((topic) =>
       new Button(HELP_SELECT, `${TOPICS[topic].emoji} ${TOPICS[topic].label}`, 'Secondary')
-        .custom_id(topic)
+        .custom_id(`${topic}:${shared ? 's' : 'p'}`)
         .disabled(topic === current),
     ),
   )
   return components
 }
 
+function footerText(shared: boolean, webUrl?: string): string {
+  const scope = shared
+    ? 'この案内はチャンネル全員に見えています'
+    : 'この案内はあなたにだけ見えています（全員に見せるには /quiz help share:True）'
+  return webUrl ? `${scope}　|　Web: ${webUrl}` : scope
+}
+
 export function buildHelpPanel(
   topic: HelpTopic,
   webUrl?: string,
+  shared = false,
 ): { embeds: Embed[]; components: Components } {
   const { summary, sections } = CONTENT[topic]
   const embed = panelEmbed({
@@ -132,7 +143,7 @@ export function buildHelpPanel(
     description: summary,
     color: topic === 'play' ? COLOR.gold : COLOR.navy,
     fields: sections,
-    footer: webUrl ? `Webからも管理できます: ${webUrl}` : undefined,
+    footer: footerText(shared, webUrl),
   })
-  return { embeds: [embed], components: topicButtons(topic) }
+  return { embeds: [embed], components: topicButtons(topic, shared) }
 }
