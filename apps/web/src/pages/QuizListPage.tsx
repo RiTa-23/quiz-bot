@@ -6,6 +6,7 @@ import {
   Card,
   ErrorNote,
   Field,
+  NoGuildNotice,
   Spinner,
   TextArea,
   TextInput,
@@ -23,13 +24,13 @@ const ROLE_LABEL: Record<string, string> = {
 }
 
 export function QuizListPage() {
-  const { guildId, guildName } = useGuild()
+  const { me, guildId, guildName } = useGuild()
   const { data, loading, error, reload } = useApi<Quiz[]>(
     guildId ? `/api/quizzes?guild_id=${guildId}` : null,
   )
   const [creating, setCreating] = useState(false)
 
-  if (!guildId) return <ErrorNote message="操作するサーバーを選択してください。" />
+  if (!guildId) return <NoGuildNotice hasGuilds={me.guilds.length > 0} />
 
   return (
     <div className="space-y-4">

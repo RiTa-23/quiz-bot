@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, ErrorNote, Select, Spinner } from '../components/ui'
+import { Card, ErrorNote, NoGuildNotice, Select, Spinner } from '../components/ui'
 import { useGuild } from '../lib/GuildContext'
 import { useApi } from '../lib/hooks'
 import type { BuzzRankingEntry, MemberStats, Quiz, QuizStats, RankingEntry } from '../lib/types'
@@ -8,8 +8,8 @@ const pct = (correct: number, total: number) =>
   total > 0 ? `${Math.round((correct / total) * 100)}%` : '—'
 
 export function StatsPage() {
-  const { guildId, guildName } = useGuild()
-  if (!guildId) return <ErrorNote message="操作するサーバーを選択してください。" />
+  const { me, guildId, guildName } = useGuild()
+  if (!guildId) return <NoGuildNotice hasGuilds={me.guilds.length > 0} />
 
   return (
     <div className="space-y-6">

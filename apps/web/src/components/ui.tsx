@@ -43,6 +43,23 @@ export function ErrorNote({ message }: { message: string }) {
   )
 }
 
+export function NoGuildNotice({ hasGuilds }: { hasGuilds: boolean }) {
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+      {hasGuilds ? (
+        '操作するサーバーを選択してください。'
+      ) : (
+        <>
+          <p className="font-medium">利用できるサーバーがありません。</p>
+          <p className="mt-1">
+            クイズBotが導入されているサーバーのみ選べます。Botを導入したうえで、もう一度ログインし直してください。
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     // biome-ignore lint/a11y/noLabelWithoutControl: children is always a form control

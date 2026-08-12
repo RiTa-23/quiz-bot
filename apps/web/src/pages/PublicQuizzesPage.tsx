@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Badge, Button, Card, ErrorNote, Spinner, TextInput } from '../components/ui'
+import { Badge, Button, Card, ErrorNote, NoGuildNotice, Spinner, TextInput } from '../components/ui'
 import { useGuild } from '../lib/GuildContext'
 import { api } from '../lib/api'
 import { useApi } from '../lib/hooks'
 import type { PublicQuizListing } from '../lib/types'
 
 export function PublicQuizzesPage() {
-  const { guildId, guildName } = useGuild()
+  const { me, guildId, guildName } = useGuild()
   const [keyword, setKeyword] = useState('')
   const [applied, setApplied] = useState('')
 
@@ -19,7 +19,7 @@ export function PublicQuizzesPage() {
   )
   const [actionError, setActionError] = useState<string | null>(null)
 
-  if (!guildId) return <ErrorNote message="操作するサーバーを選択してください。" />
+  if (!guildId) return <NoGuildNotice hasGuilds={me.guilds.length > 0} />
 
   const run = async (fn: () => Promise<unknown>) => {
     setActionError(null)
