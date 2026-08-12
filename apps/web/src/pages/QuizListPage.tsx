@@ -4,6 +4,7 @@ import {
   Badge,
   Button,
   Card,
+  EmptyNote,
   ErrorNote,
   Field,
   NoGuildNotice,
@@ -39,6 +40,10 @@ export function QuizListPage() {
       />
     )
 
+  // このサーバーで使えるクイズだけを出す（作成元 / 追加済み公開クイズ / Editor指定）。
+  // 自分が作成しただけで未登録のクイズは role が none になり、マイクイズ側に出る。
+  const visible = data?.filter((q) => q.role !== 'none')
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -60,15 +65,23 @@ export function QuizListPage() {
 
       {loading && <Spinner />}
       {error && <ErrorNote message={error} />}
-      {data && data.length === 0 && (
-        <p className="text-sm text-navy-300">まだクイズがありません。「新規作成」から作れます。</p>
+      {visible && visible.length === 0 && (
+        <EmptyNote>
+          このサーバーで使えるクイズはありません。「＋
+          新規作成」で作るか、「みつける」から追加できます。
+          <br />
+          自分が作成したクイズは「マイクイズ」で確認できます。
+        </EmptyNote>
       )}
-      {data && data.length > 0 && (
-        <ul className="divide-y divide-paper-line rounded border border-paper-line bg-paper-raised shadow-panel">
-          {data.map((q) => (
-            <li key={q.id} className="p-4 hover:bg-paper">
-              <Link to={`/quizzes/${q.id}`} className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
+      {visible && visible.length > 0 && (
+        <ul className="divide-y divide-paper-line overflow-hidden rounded border border-paper-line bg-paper-raised shadow-panel">
+          {visible.map((q) => (
+            <li key={q.id}>
+              <Link
+                to={`/quizzes/${q.id}`}
+                className="group flex items-center gap-3 p-4 transition hover:bg-paper focus-visible:bg-paper focus-visible:ring-inset focus-visible:ring-offset-0"
+              >
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-navy-900">{q.title}</p>
                   {q.description && (
                     <p className="truncate text-sm text-navy-300">{q.description}</p>
@@ -78,6 +91,12 @@ export function QuizListPage() {
                   {q.visibility === 'public' && <Badge tone="gold">公開</Badge>}
                   <Badge tone={q.isOwner ? 'green' : 'gray'}>{ROLE_LABEL[q.role] ?? q.role}</Badge>
                 </div>
+                <span
+                  aria-hidden
+                  className="shrink-0 text-navy-200 transition group-hover:translate-x-0.5 group-hover:text-gold-500"
+                >
+                  ›
+                </span>
               </Link>
             </li>
           ))}

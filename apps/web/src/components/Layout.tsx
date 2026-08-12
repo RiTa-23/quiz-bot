@@ -67,10 +67,13 @@ export function Layout({ children }: { children: ReactNode }) {
           {/* 2段目: ナビ。入りきらない場合は横スクロールさせ、行を押し広げない */}
           <nav className="-mb-px flex gap-1 overflow-x-auto">
             <NavLink to="/quizzes" className={navClass}>
-              クイズ
+              ライブラリ
+            </NavLink>
+            <NavLink to="/my" className={navClass}>
+              マイクイズ
             </NavLink>
             <NavLink to="/public" className={navClass}>
-              公開クイズ
+              みつける
             </NavLink>
             <NavLink to="/stats" className={navClass}>
               統計

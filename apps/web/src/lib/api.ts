@@ -1,5 +1,9 @@
 export const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? 'http://localhost:8788'
 
+// dev限定のモック。本番では VITE_MOCK が未設定のため false 固定になり、
+// 下の dynamic import ごとバンドルから除外される（`bun run dev:mock` でのみ有効）。
+const MOCK = import.meta.env.VITE_MOCK === '1'
+
 /** 公開クイズの共有ページ（認証不要・OGP付き）。 */
 export const shareUrl = (quizId: string) => `${API_ORIGIN}/q/${quizId}`
 
@@ -14,6 +18,11 @@ export class ApiRequestError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  if (MOCK) {
+    const { mockRequest } = await import('./mock')
+    return mockRequest<T>(path, init)
+  }
+
   const res = await fetch(`${API_ORIGIN}${path}`, {
     ...init,
     credentials: 'include',

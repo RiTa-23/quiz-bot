@@ -6,6 +6,7 @@ import { useApi } from './lib/hooks'
 import type { Me } from './lib/types'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
+import { MyQuizzesPage } from './pages/MyQuizzesPage'
 import { PublicQuizzesPage } from './pages/PublicQuizzesPage'
 import { QuizDetailPage } from './pages/QuizDetailPage'
 import { QuizListPage } from './pages/QuizListPage'
@@ -29,6 +30,7 @@ function AuthedApp() {
         <Routes>
           <Route path="/quizzes" element={<QuizListPage />} />
           <Route path="/quizzes/:id" element={<QuizDetailPage />} />
+          <Route path="/my" element={<MyQuizzesPage />} />
           <Route path="/public" element={<PublicQuizzesPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="*" element={<Navigate to="/quizzes" replace />} />

@@ -1,5 +1,14 @@
 import { useState } from 'react'
-import { Badge, Button, Card, ErrorNote, NoGuildNotice, Spinner, TextInput } from '../components/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyNote,
+  ErrorNote,
+  NoGuildNotice,
+  Spinner,
+  TextInput,
+} from '../components/ui'
 import { useGuild } from '../lib/GuildContext'
 import { api } from '../lib/api'
 import { useApi } from '../lib/hooks'
@@ -46,7 +55,12 @@ export function PublicQuizzesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="break-words text-2xl">公開クイズ（{guildName(guildId)} に追加）</h1>
+      <div>
+        <h1 className="break-words text-2xl">みつける</h1>
+        <p className="mt-1 text-sm text-navy-300">
+          他のサーバーが公開しているクイズを探して、{guildName(guildId)} に追加できます。
+        </p>
+      </div>
       {actionError && <ErrorNote message={actionError} />}
 
       <div className="flex gap-2">
@@ -77,11 +91,11 @@ export function PublicQuizzesPage() {
         {loading && <Spinner />}
         {error && <ErrorNote message={error} />}
         {data && data.length === 0 && (
-          <p className="text-sm text-navy-300">
+          <EmptyNote>
             {applied
               ? '該当する公開クイズが見つかりませんでした。'
               : '追加できる公開クイズはありません。'}
-          </p>
+          </EmptyNote>
         )}
         {data?.map((q) => (
           <Card key={q.id} className="flex flex-wrap items-center justify-between gap-3">
