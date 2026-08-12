@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { buzzAttempts } from '../db/schema'
+import { attemptId } from './attemptId'
 import type { RankingPeriod } from './guildRanking'
 
 export type BuzzAttemptRecord = {
@@ -13,26 +14,32 @@ export type BuzzAttemptRecord = {
   isWinner: boolean
 }
 
-/** 早押しの回答結果をまとめて記録する（設問締め切り時にDOから呼ばれる）。 */
+/**
+ * 早押しの回答結果をまとめて記録する（設問締め切り時にDOから呼ばれる）。
+ * 再送で重複しないよう、主キーは内容から決定的に組み立てて衝突は無視する。
+ */
 export async function recordBuzzAttempts(
   db: Database,
   entries: BuzzAttemptRecord[],
 ): Promise<void> {
   if (entries.length === 0) return
   const now = new Date().toISOString()
-  await db.insert(buzzAttempts).values(
-    entries.map((e) => ({
-      id: crypto.randomUUID(),
-      sessionId: e.sessionId,
-      questionId: e.questionId,
-      quizId: e.quizId,
-      guildId: e.guildId,
-      userId: e.userId,
-      isCorrect: e.isCorrect,
-      isWinner: e.isWinner,
-      answeredAt: now,
-    })),
-  )
+  await db
+    .insert(buzzAttempts)
+    .values(
+      entries.map((e) => ({
+        id: attemptId(e.sessionId, e.questionId, e.userId),
+        sessionId: e.sessionId,
+        questionId: e.questionId,
+        quizId: e.quizId,
+        guildId: e.guildId,
+        userId: e.userId,
+        isCorrect: e.isCorrect,
+        isWinner: e.isWinner,
+        answeredAt: now,
+      })),
+    )
+    .onConflictDoNothing()
 }
 
 export type BuzzRankingEntry = {
