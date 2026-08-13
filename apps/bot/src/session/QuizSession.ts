@@ -449,6 +449,20 @@ export class QuizSession extends DurableObject<Bindings> {
     })
 
     if (!correct) {
+      // 参加者が全員回答し終えたら、誰も正解しなかったのでタイムアウトを待たず次へ進める。
+      // participants 未設定の旧セッションは人数が不明なため、従来どおりタイムアウトに委ねる。
+      const total = s.participants?.length
+      if (total && s.buzzAnswered.length >= total) {
+        s.buzzClosed = true
+        const next = await this.advanceBuzz()
+        await this.save()
+        return {
+          kind: 'buzz-all-wrong',
+          correctAnswers: q.answers,
+          explanation: q.explanation,
+          next,
+        }
+      }
       await this.save()
       return { kind: 'buzz-wrong' }
     }
@@ -456,13 +470,7 @@ export class QuizSession extends DurableObject<Bindings> {
     // 最初の正解者 = 勝者
     s.buzzClosed = true
     s.buzzScores[userId] = (s.buzzScores[userId] ?? 0) + 1
-    await this.flushPending()
-    await this.ctx.storage.deleteAlarm()
-    const next = this.buildNext()
-    if (!next.done && s.mode === 'buzz') {
-      this.resetQuestionState()
-      await this.ctx.storage.setAlarm(Date.now() + BUZZ_TIMEOUT_MS)
-    }
+    const next = await this.advanceBuzz()
     await this.save()
     return {
       kind: 'buzz-win',
@@ -471,6 +479,18 @@ export class QuizSession extends DurableObject<Bindings> {
       explanation: q.explanation,
       next,
     }
+  }
+
+  /** 早押しの現問を締めて次へ。未送信の回答を書き出し、タイマーを引き直す。 */
+  private async advanceBuzz(): Promise<NextStep> {
+    await this.flushPending()
+    await this.ctx.storage.deleteAlarm()
+    const next = this.buildNext()
+    if (!next.done && (this.state as State).mode === 'buzz') {
+      this.resetQuestionState()
+      await this.ctx.storage.setAlarm(Date.now() + BUZZ_TIMEOUT_MS)
+    }
+    return next
   }
 
   /**

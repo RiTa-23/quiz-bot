@@ -257,7 +257,7 @@ export function buildSummary(summary: SummaryData): Embed {
 
 /** 前問の結果。正誤で色を変え、出題の埋め込みの上に重ねて使う。 */
 export function buildAdvanceHeader(input: {
-  kind: 'solo-result' | 'buzz-win' | 'timeout'
+  kind: 'solo-result' | 'buzz-win' | 'timeout' | 'all-wrong'
   correct?: boolean
   winnerId?: string
   correctAnswers?: string[]
@@ -266,6 +266,16 @@ export function buildAdvanceHeader(input: {
   const answers = input.correctAnswers?.join(' / ') ?? ''
   if (input.kind === 'timeout') {
     return panelEmbed({ title: '時間切れ', description: '正解者なし', color: COLOR.muted })
+  }
+  if (input.kind === 'all-wrong') {
+    return panelEmbed({
+      title: '全員不正解',
+      color: COLOR.wrong,
+      fields: [
+        { name: '正解', value: answers || '—', inline: true },
+        ...(input.explanation ? [{ name: '解説', value: input.explanation }] : []),
+      ],
+    })
   }
   const title =
     input.kind === 'buzz-win' ? `<@${input.winnerId}> が正解！` : input.correct ? '正解' : '不正解'
