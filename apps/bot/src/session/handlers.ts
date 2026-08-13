@@ -227,23 +227,40 @@ export function handleSessionFtOpen(c: ComponentContext<{ Bindings: Bindings }>)
   return c.resModal(buildFreetextModal(questionId ?? '', messageId ?? ''))
 }
 
-/** 自由記述: モーダル送信。モーダルは元メッセージを更新できないためRESTで編集する。 */
-export async function handleSessionFtModal(c: ModalContext<{ Bindings: Bindings }>) {
+/**
+ * 自由記述: モーダル送信。モーダルは元メッセージを更新できないためRESTで編集する。
+ * 「DO更新 → 別メッセージのREST編集」と処理が長く、同期応答だと3秒の期限を超えて
+ * 出題が進まない（前の問題が残る）ことがある。先に defer でACKし、続きを遅延実行する。
+ */
+export function handleSessionFtModal(c: ModalContext<{ Bindings: Bindings }>) {
   const [questionId, messageId] = (c.var.custom_id ?? '').split(':')
   const text = (c.var as Record<string, string | undefined>)[FT_INPUT] ?? ''
   const { actor, channelId, stub } = stubFromComponent(c)
-  const outcome = await stub.answer(actor.userId, questionId ?? '', { kind: 'text', text })
 
-  if (outcome.kind === 'ignored')
-    return c.ephemeral().res(IGNORED_MESSAGE[outcome.reason] ?? 'エラー')
-  if (outcome.kind === 'buzz-wrong') return c.ephemeral().res('不正解… 早い者勝ちです。')
+  return c.ephemeral().resDefer(async (c) => {
+    try {
+      const outcome = await stub.answer(actor.userId, questionId ?? '', { kind: 'text', text })
 
-  const rendered = renderAdvance(outcome, messageId ?? '')
-  if (messageId) {
-    await editChannelMessage(c.env.DISCORD_TOKEN, channelId, messageId, {
-      embeds: rendered.embeds.map((e) => e.toJSON()),
-      components: rendered.components ? rendered.components.toJSON() : [],
-    })
-  }
-  return c.ephemeral().res(outcome.kind === 'buzz-win' ? '正解！🎉' : '回答を記録しました。')
+      if (outcome.kind === 'ignored') {
+        await c.followup(IGNORED_MESSAGE[outcome.reason] ?? 'エラー')
+        return
+      }
+      if (outcome.kind === 'buzz-wrong') {
+        await c.followup('不正解… 早い者勝ちです。')
+        return
+      }
+
+      const rendered = renderAdvance(outcome, messageId ?? '')
+      if (messageId) {
+        await editChannelMessage(c.env.DISCORD_TOKEN, channelId, messageId, {
+          embeds: rendered.embeds.map((e) => e.toJSON()),
+          components: rendered.components ? rendered.components.toJSON() : [],
+        })
+      }
+      await c.followup(outcome.kind === 'buzz-win' ? '正解！🎉' : '回答を記録しました。')
+    } catch (error) {
+      console.error('handleSessionFtModal failed', error)
+      await c.followup('回答の処理に失敗しました。もう一度お試しください。')
+    }
+  })
 }
