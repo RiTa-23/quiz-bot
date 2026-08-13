@@ -16,7 +16,7 @@ const EXAMPLE = [
   {
     type: 'true_false',
     body: '富士山は静岡県と山梨県にまたがっている。',
-    answers: ['○'],
+    answer: true,
   },
   {
     type: 'free_text',
@@ -32,6 +32,19 @@ const asStringArray = (v: unknown): string[] => {
 }
 
 const clean = (arr: string[]) => arr.map((s) => s.trim()).filter(Boolean)
+
+// ○×は記号の表記ゆれ（○/〇/◯・×/✕/x）で一致しない事故を避けるため、JSONでは真偽値で書く。
+// 内部の正解表現は "○" / "×" なので、ここで変換する。
+const toBool = (v: unknown): boolean | null => {
+  if (typeof v === 'boolean') return v
+  if (Array.isArray(v)) return v.length > 0 ? toBool(v[0]) : null
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase()
+    if (s === 'true') return true
+    if (s === 'false') return false
+  }
+  return null
+}
 
 function toQuestionInput(item: unknown, i: number): QuestionInput {
   const n = i + 1
@@ -62,11 +75,11 @@ function toQuestionInput(item: unknown, i: number): QuestionInput {
     return { type, body, choices, answers, explanation }
   }
   if (type === 'true_false') {
-    const a = answers[0]
-    if (a !== '○' && a !== '×') {
-      throw new Error(`${n}問目: ○×問題の answers は "○" か "×" にしてください`)
+    const bool = toBool(o.answer ?? o.answers)
+    if (bool === null) {
+      throw new Error(`${n}問目: ○×問題は answer を true / false で指定してください`)
     }
-    return { type, body, choices: null, answers: [a], explanation }
+    return { type, body, choices: null, answers: [bool ? '○' : '×'], explanation }
   }
   if (answers.length === 0)
     throw new Error(`${n}問目: answers（正解パターン）を1つ以上入力してください`)
@@ -192,7 +205,10 @@ export function QuestionImportCard({
             <code>choices</code>: 4択のときの選択肢（2つ以上）
           </li>
           <li>
-            <code>answers</code>: 正解の配列。○×は <code>["○"]</code> か <code>["×"]</code>
+            <code>answers</code>: 正解の配列（4択・自由記述）
+          </li>
+          <li>
+            ○×は <code>answer</code> に <code>true</code>（○）か <code>false</code>（×）で指定
           </li>
           <li>
             <code>explanation</code>: 解説（任意）
