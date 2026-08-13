@@ -109,6 +109,16 @@ SNS共有用のOGP画像（PNG 1200x630）を生成して返す。**認証・COR
 - Body: `{ type, body, choices?, answers, explanation?, sort_order? }`
   - `type = free_text` の場合、`answers` は複数の正解パターンを配列で受け取る
 
+### `POST /api/quizzes/:id/questions/bulk`
+設問の一括追加（Webの「JSONで一括追加」用）。Owner / Editor。
+
+- Body: `{ questions: [{ type, body, choices?, answers, explanation? }, ...] }`（1〜100件）
+- 各要素は `POST .../questions` と同じ形式。バリデーションは全件を先に検証し、1件でも不正なら追加せず `400`（メッセージに何問目かを含める）
+  - HTTP上の `answers` は `true_false` でも `["○"]` / `["×"]`。ただし**Webのインポートファイル**では ○× の記号ゆれ（○/〇/◯・×/✕/x）で不一致になるのを避けるため、`answer: true/false`（真偽値）で記述し、送信時に文字へ変換する
+- `sort_order` は既存設問の後ろに、配列の並び順で自動採番する
+- D1のバインド変数上限（100/クエリ）に合わせて内部で分割INSERTするが、`db.batch` で原子的に実行する（途中失敗で中途半端に残らない）
+- Response: 追加された `Question[]`（`201`）
+
 ### `PATCH /api/quizzes/:id/questions/:qid`
 設問更新。Owner / Editor。
 

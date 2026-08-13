@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { questions } from '../db/schema'
 import { notFound, validationError } from '../errors'
@@ -74,6 +74,75 @@ export async function addQuestion(
     createdAt: now,
     updatedAt: now,
   }
+}
+
+// D1 は1クエリのバインド変数を100までに制限する。設問1行=11列なので、
+// 余裕をもって8行ずつに分割して多行INSERTする（分割ぶんは1バッチで原子的に流す）。
+const INSERT_CHUNK = 8
+
+export async function addQuestions(
+  db: Database,
+  actor: Actor,
+  quizId: string,
+  inputs: AddQuestionInput[],
+): Promise<Question[]> {
+  const quiz = await getQuizOrThrow(db, quizId)
+  await assertCanEditQuiz(db, actor, quiz)
+  if (inputs.length === 0) throw validationError('追加する設問がありません')
+
+  inputs.forEach((input, i) => {
+    try {
+      validateQuestionInput(input, input.type)
+    } catch (e) {
+      throw validationError(`${i + 1}問目: ${e instanceof Error ? e.message : '入力が不正です'}`)
+    }
+  })
+
+  // 既存設問の後ろに、ファイルの並び順のまま追加する
+  const [top] = await db
+    .select({ sortOrder: questions.sortOrder })
+    .from(questions)
+    .where(eq(questions.quizId, quizId))
+    .orderBy(desc(questions.sortOrder))
+    .limit(1)
+  const base = (top?.sortOrder ?? -1) + 1
+
+  const now = new Date().toISOString()
+  const rows = inputs.map((input, i) => ({
+    id: crypto.randomUUID(),
+    quizId,
+    type: input.type,
+    body: input.body,
+    choices: input.type === 'multiple_choice' ? (input.choices ?? null) : null,
+    answers: input.answers,
+    explanation: input.explanation ?? null,
+    sortOrder: input.sortOrder ?? base + i,
+    createdByUserId: actor.userId,
+    createdAt: now,
+    updatedAt: now,
+  }))
+
+  const statements = []
+  for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+    statements.push(db.insert(questions).values(rows.slice(i, i + INSERT_CHUNK)))
+  }
+  const [first, ...rest] = statements
+  // 途中のチャンクで失敗しても設問が中途半端に残らないよう、全文を1バッチで実行する
+  if (first) await db.batch([first, ...rest])
+
+  return rows.map((r) => ({
+    id: r.id,
+    quizId: r.quizId,
+    type: r.type,
+    body: r.body,
+    choices: r.choices,
+    answers: r.answers,
+    explanation: r.explanation,
+    sortOrder: r.sortOrder,
+    createdByUserId: r.createdByUserId,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }))
 }
 
 export type UpdateQuestionInput = {
