@@ -67,6 +67,13 @@ export type AnswerOutcome =
       explanation: string | null
       next: NextStep
     }
+  // 全参加者が回答して誰も正解しなかった。タイムアウトを待たず次へ進める。
+  | {
+      kind: 'buzz-all-wrong'
+      correctAnswers: string[]
+      explanation: string | null
+      next: NextStep
+    }
 
 /** 設定GUIの操作結果。操作できるのはホスト（/quiz play の実行者）だけ。 */
 export type ControlResult =
