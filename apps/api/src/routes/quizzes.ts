@@ -1,6 +1,7 @@
 import {
   addPublicQuiz,
   addQuestion,
+  addQuestions,
   createDb,
   createQuiz,
   deleteQuestion,
@@ -159,6 +160,33 @@ quizzesRoutes.post('/:id/questions', async (c) => {
       sortOrder: body.sort_order,
     })
     return c.json(question, 201)
+  } catch (error) {
+    return handleApiError(c, error)
+  }
+})
+
+const bulkQuestionsSchema = z.object({
+  questions: z.array(questionSchema).min(1).max(100),
+})
+
+quizzesRoutes.post('/:id/questions/bulk', async (c) => {
+  try {
+    const body = bulkQuestionsSchema.parse(await c.req.json())
+    const db = createDb(c.env.DB)
+    const created = await addQuestions(
+      db,
+      actorFromQuery(c),
+      c.req.param('id'),
+      body.questions.map((q) => ({
+        type: q.type,
+        body: q.body,
+        choices: q.choices,
+        answers: q.answers,
+        explanation: q.explanation,
+        sortOrder: q.sort_order,
+      })),
+    )
+    return c.json(created, 201)
   } catch (error) {
     return handleApiError(c, error)
   }

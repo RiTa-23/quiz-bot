@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EditorSettingsCard } from '../components/EditorSettingsCard'
 import { QuestionForm } from '../components/QuestionForm'
+import { QuestionImportCard } from '../components/QuestionImportCard'
 import {
   Badge,
   Button,
@@ -32,6 +33,7 @@ export function QuizDetailPage() {
     id ? `/api/quizzes/${id}${guildId ? `?guild_id=${guildId}` : ''}` : null,
   )
   const [adding, setAdding] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -56,6 +58,13 @@ export function QuizDetailPage() {
 
   const addQuestion = async (input: QuestionInput) => {
     if (await run(() => api.post(`/api/quizzes/${data.id}/questions`, input))) setAdding(false)
+  }
+  const importQuestions = async (inputs: QuestionInput[]): Promise<boolean> => {
+    const ok = await run(() =>
+      api.post(`/api/quizzes/${data.id}/questions/bulk`, { questions: inputs }),
+    )
+    if (ok) setImporting(false)
+    return ok
   }
   const updateQuestion = async (qid: string, input: QuestionInput) => {
     if (await run(() => api.patch(`/api/quizzes/${data.id}/questions/${qid}`, input)))
@@ -99,12 +108,27 @@ export function QuizDetailPage() {
         <QuizMetaCard quiz={data} onSaved={reload} onDeleted={() => navigate('/quizzes')} />
       )}
 
+      {canManage && guildId && <EditorSettingsCard quizId={data.id} guildId={guildId} />}
+
       {/* 設問 */}
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="rule-gold text-lg">設問（{data.questions.length}）</h2>
-          {canEdit && !adding && <Button onClick={() => setAdding(true)}>＋ 設問を追加</Button>}
+          {canEdit && !adding && !importing && (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setImporting(true)}>
+                JSONで一括追加
+              </Button>
+              <Button onClick={() => setAdding(true)}>＋ 設問を追加</Button>
+            </div>
+          )}
         </div>
+
+        {importing && (
+          <Card>
+            <QuestionImportCard onImport={importQuestions} onCancel={() => setImporting(false)} />
+          </Card>
+        )}
 
         {adding && (
           <Card>
@@ -145,8 +169,6 @@ export function QuizDetailPage() {
           )}
         </ul>
       </section>
-
-      {canManage && guildId && <EditorSettingsCard quizId={data.id} guildId={guildId} />}
     </div>
   )
 }

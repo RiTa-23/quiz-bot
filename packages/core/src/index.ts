@@ -7,7 +7,7 @@ export { getQuiz, type QuizDetail } from './quiz/getQuiz'
 export { listQuizzes, type QuizListItem } from './quiz/listQuizzes'
 export { updateQuiz, type UpdateQuizInput } from './quiz/updateQuiz'
 export { deleteQuiz } from './quiz/deleteQuiz'
-export { addQuestion, updateQuestion, deleteQuestion } from './quiz/questions'
+export { addQuestion, addQuestions, updateQuestion, deleteQuestion } from './quiz/questions'
 export type { AddQuestionInput, UpdateQuestionInput } from './quiz/questions'
 export {
   getPublicQuizSummary,
