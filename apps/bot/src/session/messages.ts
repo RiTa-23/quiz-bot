@@ -231,17 +231,23 @@ const MEDALS = ['🥇', '🥈', '🥉']
 
 /** 終了サマリの埋め込み。components は空にする。 */
 export function buildSummary(summary: SummaryData): Embed {
+  const quizTitle = summary.quizTitle ?? '（不明なクイズ）'
+
   if (summary.mode === 'solo') {
     const rate = Math.round((summary.correct / Math.max(1, summary.total)) * 100)
     return panelEmbed({
       title: '結果',
+      description: `**${quizTitle}**`,
       color: summary.correct === summary.total ? COLOR.gold : COLOR.navy,
       fields: [
         { name: '正解数', value: `**${summary.correct}** / ${summary.total}問`, inline: true },
         { name: '正答率', value: `${rate}%`, inline: true },
+        { name: 'プレイ形式', value: '1人', inline: true },
       ],
+      footer: `全${summary.total}問で実施`,
     })
   }
+
   const ranking = summary.scores
     .slice()
     .sort((a, b) => b.score - a.score)
@@ -249,9 +255,13 @@ export function buildSummary(summary: SummaryData): Embed {
     .join('\n')
   return panelEmbed({
     title: '早押し結果',
+    description: `**${quizTitle}**\n\n${ranking || '正解者なし'}`,
     color: COLOR.gold,
-    description: ranking || '正解者なし',
-    footer: `全${summary.total}問`,
+    fields: [
+      { name: 'プレイ形式', value: 'みんなで早押し', inline: true },
+      { name: '出題数', value: `${summary.total}問`, inline: true },
+      { name: '参加者', value: `${summary.participantCount}人`, inline: true },
+    ],
   })
 }
 
