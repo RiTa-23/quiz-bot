@@ -124,8 +124,7 @@ export function LandingPage() {
           <p className="mt-5 max-w-xl leading-relaxed text-navy-100">
             4択も○×も自由記述も、思いついた問題をそのまま出題。
             仲間と一緒に育てて、公開して、ほかのサーバーへ広げていく。
-            ひとりでじっくりも、みんなで早押しも。
-            クイズを楽しむためのDiscord Botです。
+            ひとりでじっくりも、みんなで早押しも。 クイズを楽しむためのDiscord Botです。
           </p>
           <ul className="mt-6 flex flex-wrap gap-2">
             {HERO_TAGS.map((t) => (

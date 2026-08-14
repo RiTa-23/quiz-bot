@@ -89,10 +89,11 @@ export function buildPublicPanel(
         ...quizzes.slice(0, LIST_LIMIT).map((q) => ({
           label: q.title.slice(0, 100),
           value: q.id,
-          description: `${q.questionCount}問${q.description ? ` / ${q.description}` : ''}`.slice(
-            0,
-            100,
-          ),
+          description:
+            `${q.questionCount}問 / ${q.shareCount}サーバーが追加${q.description ? ` / ${q.description}` : ''}`.slice(
+              0,
+              100,
+            ),
         })),
       ),
     )

@@ -19,6 +19,8 @@ export type PublicQuizListing = {
   description: string | null
   ownerGuildId: string
   questionCount: number
+  /** このクイズを追加しているサーバー数。公開クイズの人気度として見せる */
+  shareCount: number
 }
 
 const DEFAULT_LIST_LIMIT = 25
@@ -30,6 +32,9 @@ const DEFAULT_LIST_LIMIT = 25
  * と書くとサブクエリ側で両方 questions の列に解決され、常に0件になる。
  */
 const questionCountSql = sql<number>`(select count(*) from questions where questions.quiz_id = quizzes.id)`
+
+/** 追加しているサーバー数。テーブル名を明示する理由は questionCountSql と同じ。 */
+const shareCountSql = sql<number>`(select count(*) from quiz_shares where quiz_shares.quiz_id = quizzes.id)`
 
 function requireGuild(actor: Actor): string {
   if (actor.guildId === null) {
@@ -72,6 +77,7 @@ export async function listPublicQuizzes(
       description: quizzes.description,
       ownerGuildId: quizzes.ownerGuildId,
       questionCount: questionCountSql,
+      shareCount: shareCountSql,
     })
     .from(quizzes)
     .where(and(...conditions))
@@ -92,6 +98,7 @@ export async function listAddedQuizzes(db: Database, actor: Actor): Promise<Publ
       description: quizzes.description,
       ownerGuildId: quizzes.ownerGuildId,
       questionCount: questionCountSql,
+      shareCount: shareCountSql,
     })
     .from(quizShares)
     .innerJoin(quizzes, eq(quizzes.id, quizShares.quizId))

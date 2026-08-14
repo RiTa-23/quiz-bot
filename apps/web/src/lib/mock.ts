@@ -163,6 +163,7 @@ const PUBLIC_AVAILABLE: PublicQuizListing[] = [
     description: '全12問',
     ownerGuildId: 'g9',
     questionCount: 12,
+    shareCount: 7,
   },
   {
     id: 'p2',
@@ -170,6 +171,7 @@ const PUBLIC_AVAILABLE: PublicQuizListing[] = [
     description: '日本のことわざを集めた定番セット',
     ownerGuildId: 'g9',
     questionCount: 20,
+    shareCount: 23,
   },
 ]
 
@@ -180,6 +182,7 @@ const PUBLIC_ADDED: PublicQuizListing[] = [
     description: null,
     ownerGuildId: 'g9',
     questionCount: 30,
+    shareCount: 4,
   },
 ]
 
@@ -239,6 +242,17 @@ const QUIZ_STATS: Record<string, QuizStats> = {
     correctCount: 48,
     correctRate: 0.8,
     uniqueUserCount: 12,
+    shareCount: 5,
+    byGuild: [
+      {
+        guildId: 'g1',
+        totalAttempts: 40,
+        correctCount: 33,
+        correctRate: 0.825,
+        uniqueUserCount: 8,
+      },
+      { guildId: 'g9', totalAttempts: 20, correctCount: 15, correctRate: 0.75, uniqueUserCount: 4 },
+    ],
     questions: [
       {
         questionId: 'qq1',
@@ -273,6 +287,7 @@ const QUIZ_STATS: Record<string, QuizStats> = {
     correctCount: 0,
     correctRate: 0,
     uniqueUserCount: 0,
+    shareCount: 0,
     questions: [],
   },
   q3: {
@@ -282,6 +297,7 @@ const QUIZ_STATS: Record<string, QuizStats> = {
     correctCount: 11,
     correctRate: 0.786,
     uniqueUserCount: 5,
+    shareCount: 2,
     questions: [
       {
         questionId: 'qq9',

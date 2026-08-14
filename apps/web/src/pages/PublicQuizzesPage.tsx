@@ -102,7 +102,8 @@ export function PublicQuizzesPage() {
             <div className="min-w-0">
               <p className="truncate font-medium">{q.title}</p>
               <p className="text-sm text-navy-300">
-                {q.questionCount}問{q.description ? ` ・ ${q.description}` : ''}
+                {q.questionCount}問 ・ 🌐 {q.shareCount}サーバーが追加
+                {q.description ? ` ・ ${q.description}` : ''}
               </p>
             </div>
             <Button onClick={() => add(q.id)}>追加</Button>
@@ -118,7 +119,9 @@ export function PublicQuizzesPage() {
             <Card key={q.id} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-medium">{q.title}</p>
-                <p className="text-sm text-navy-300">{q.questionCount}問</p>
+                <p className="text-sm text-navy-300">
+                  {q.questionCount}問 ・ 🌐 {q.shareCount}サーバーが追加
+                </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Badge tone="green">追加済み</Badge>
