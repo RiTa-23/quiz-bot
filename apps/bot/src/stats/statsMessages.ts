@@ -10,7 +10,6 @@ export const QS_PAGE_NEXT = 'qspn' // 次ページ（同上）
 
 export const RANKING_LIMIT = 10
 const MAX_CONTENT = 1900
-const BODY_MAX = 60
 
 export type StatsPanelState = { page: number; invokerId: string }
 
@@ -28,22 +27,6 @@ export function pct(correct: number, total: number): string {
 
 function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max)}…` : text
-}
-
-/** 2000文字上限に収まるよう行を積む。溢れた分は件数だけ伝える。 */
-function joinWithBudget(head: string[], items: string[], overflowLabel: string): string {
-  const lines = [...head]
-  let used = lines.join('\n').length
-  let shown = 0
-  for (const item of items) {
-    if (used + item.length + 1 > MAX_CONTENT) break
-    lines.push(item)
-    used += item.length + 1
-    shown += 1
-  }
-  const rest = items.length - shown
-  if (rest > 0) lines.push(`…ほか${rest}${overflowLabel}`)
-  return lines.join('\n')
 }
 
 /** /quiz stats のクイズ選択パネル。 */
@@ -78,32 +61,30 @@ export function buildStatsPanel(
   return { content, components }
 }
 
-/** クイズ単位の統計メッセージ。 */
-export function buildQuizStatsMessage(stats: QuizStats): string {
-  const head = [
+/**
+ * クイズ単位の統計メッセージ。
+ * 設問ごとの正答率はメッセージが長くなりすぎるため載せず、Web管理画面に任せる。
+ */
+export function buildQuizStatsMessage(stats: QuizStats, webUrl?: string): string {
+  const lines = [
     `📊 **${stats.title}** の統計（このサーバー・1人モード・全期間）`,
     '',
     `全体: ${stats.totalAttempts}回答 / 正答率 ${pct(stats.correctCount, stats.totalAttempts)} / 参加者 ${stats.uniqueUserCount}人`,
   ]
 
   if (stats.questions.length === 0) {
-    return [
-      ...head,
-      '',
-      'このクイズにはまだ設問がありません。`/quiz add-question` で追加できます。',
-    ].join('\n')
+    lines.push('', 'このクイズにはまだ設問がありません。`/quiz add-question` で追加できます。')
+    return lines.join('\n')
   }
 
   if (stats.totalAttempts === 0) {
-    head.push('', 'まだ誰もプレイしていません。`/quiz play` で出題できます。')
+    lines.push('', 'まだ誰もプレイしていません。`/quiz play` で出題できます。')
   }
 
-  head.push('', '**設問別**')
-  const items = stats.questions.map(
-    (q, i) =>
-      `${i + 1}. ${pct(q.correctCount, q.totalAttempts)} (${q.totalAttempts}回) ${truncate(q.body, BODY_MAX)}`,
-  )
-  return joinWithBudget(head, items, '問')
+  lines.push('', `設問数: ${stats.questions.length}問`)
+  // メッセージ本文では [表示文字](URL) がリンクにならないため、URLをそのまま出す
+  if (webUrl) lines.push(`設問ごとの正答率はWebで見られます: ${webUrl}/stats`)
+  return lines.join('\n')
 }
 
 /** /quiz my-stats の埋め込み。 */
