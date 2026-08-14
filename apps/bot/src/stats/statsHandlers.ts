@@ -66,7 +66,7 @@ export async function handleQsSelect(c: ComponentContext<{ Bindings: Bindings }>
 
   const db = createDb(c.env.DB)
   const stats = await getQuizStats(db, actor, selectValue(c), { guildId: actor.guildId })
-  return c.res({ content: buildQuizStatsMessage(stats), ...NO_PING })
+  return c.res({ content: buildQuizStatsMessage(stats, c.env.WEB_URL), ...NO_PING })
 }
 
 /** ページ送りは共有メッセージを書き換えるため、実行者本人のみに制限する。 */
