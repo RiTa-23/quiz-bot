@@ -23,6 +23,14 @@ export type PublicQuizListing = {
 
 const DEFAULT_LIST_LIMIT = 25
 
+/**
+ * クイズの設問数を数える相関サブクエリ。
+ * テーブル名は明示的に書く。Drizzleはトップレベルにjoinが無いと `sql` 内の
+ * カラム参照からテーブル修飾を落とすため、`${questions.quizId} = ${quizzes.id}`
+ * と書くとサブクエリ側で両方 questions の列に解決され、常に0件になる。
+ */
+const questionCountSql = sql<number>`(select count(*) from questions where questions.quiz_id = quizzes.id)`
+
 function requireGuild(actor: Actor): string {
   if (actor.guildId === null) {
     throw validationError('この操作はサーバー内で実行してください')
@@ -63,7 +71,7 @@ export async function listPublicQuizzes(
       title: quizzes.title,
       description: quizzes.description,
       ownerGuildId: quizzes.ownerGuildId,
-      questionCount: sql<number>`(select count(*) from ${questions} where ${questions.quizId} = ${quizzes.id})`,
+      questionCount: questionCountSql,
     })
     .from(quizzes)
     .where(and(...conditions))
@@ -83,7 +91,7 @@ export async function listAddedQuizzes(db: Database, actor: Actor): Promise<Publ
       title: quizzes.title,
       description: quizzes.description,
       ownerGuildId: quizzes.ownerGuildId,
-      questionCount: sql<number>`(select count(*) from ${questions} where ${questions.quizId} = ${quizzes.id})`,
+      questionCount: questionCountSql,
     })
     .from(quizShares)
     .innerJoin(quizzes, eq(quizzes.id, quizShares.quizId))
