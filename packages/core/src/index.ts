@@ -46,7 +46,12 @@ export {
   type OwnedQuiz,
 } from './play/session'
 
-export { getQuizStats, type QuizStats, type QuizQuestionStats } from './stats/quizStats'
+export {
+  getQuizStats,
+  type QuizStats,
+  type QuizQuestionStats,
+  type QuizGuildStats,
+} from './stats/quizStats'
 export {
   getMemberStats,
   type MemberStats,

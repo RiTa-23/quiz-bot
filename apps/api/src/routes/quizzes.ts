@@ -338,8 +338,11 @@ quizzesRoutes.get('/:id/stats', async (c) => {
   try {
     const db = createDb(c.env.DB)
     const guildId = c.req.query('guild_id')
+    // scope=all は全サーバー横断（作成者限定。可否は core 側で判定する）
+    const scope = c.req.query('scope') === 'all' ? 'all' : 'guild'
     const stats = await getQuizStats(db, actorFromQuery(c), c.req.param('id'), {
       guildId: guildId || undefined,
+      scope,
     })
     return c.json(stats)
   } catch (error) {

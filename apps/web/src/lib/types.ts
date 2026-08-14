@@ -69,6 +69,8 @@ export type PublicQuizListing = {
   description: string | null
   ownerGuildId: string
   questionCount: number
+  /** このクイズを追加しているサーバー数（人気度） */
+  shareCount: number
 }
 
 export type QuizQuestionStats = {
@@ -80,6 +82,14 @@ export type QuizQuestionStats = {
   correctRate: number
 }
 
+export type QuizGuildStats = {
+  guildId: string
+  totalAttempts: number
+  correctCount: number
+  correctRate: number
+  uniqueUserCount: number
+}
+
 export type QuizStats = {
   quizId: string
   title: string
@@ -88,6 +98,10 @@ export type QuizStats = {
   correctRate: number
   uniqueUserCount: number
   questions: QuizQuestionStats[]
+  /** このクイズを追加しているサーバー数 */
+  shareCount: number
+  /** 全サーバー集計を要求したときのみ入る（作成者限定） */
+  byGuild?: QuizGuildStats[]
 }
 
 /** APIが添えるDiscordの表示名。引けなかったユーザーは null */

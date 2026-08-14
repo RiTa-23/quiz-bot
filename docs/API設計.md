@@ -137,14 +137,14 @@ SNS共有用のOGP画像（PNG 1200x630）を生成して返す。**認証・COR
 指定サーバーにまだ追加していない、追加可能な公開クイズ一覧。
 
 - Query: `guild_id`（必須。所属検証あり）, `keyword`（タイトル部分一致・任意）
-- Response: `{ id, title, description, questionCount }[]`
+- Response: `{ id, title, description, questionCount, shareCount }[]`（`shareCount` = 追加しているサーバー数＝人気度）
 - 自サーバー発のクイズと追加済みのものは除外される
 
 ### `GET /api/quizzes/added`
 指定サーバーが追加済みの公開クイズ一覧。
 
 - Query: `guild_id`（必須。所属検証あり）
-- Response: `{ id, title, description, questionCount }[]`
+- Response: `{ id, title, description, questionCount, shareCount }[]`（`shareCount` = 追加しているサーバー数＝人気度）
 
 ### `POST /api/quizzes/:id/shares`
 公開クイズを指定サーバーに追加する。
@@ -212,6 +212,11 @@ Discord上での実際の出題・回答フローは `apps/bot` が `packages/co
 クイズ単位の統計（`quiz_attempts` 由来＝1人モード）。**閲覧権限が必要**で、権限がなければ `403 FORBIDDEN` を返す（「そのサーバーで使えるクイズ」または「自分が作成したクイズ」なら閲覧可）。
 
 - 設問一覧には**まだ誰も答えていない設問も含まれる**（`totalAttempts: 0`）
+- `guild_id` を渡すとそのサーバー分のみを集計する
+- `scope=all` で**全サーバー横断**の集計になり、サーバー別内訳 `byGuild[]`（`guildId, totalAttempts, correctCount, correctRate, uniqueUserCount`）が付く
+  - 他サーバーでの遊ばれ方が見えるため、**クイズの作成者本人のみ**。それ以外は `403 FORBIDDEN`
+  - `guild_id` を省略した場合も全サーバー集計とみなし、同じく作成者限定として扱う
+- `shareCount`: そのクイズを追加しているサーバー数（常に含む）
 - Response:
   ```json
   {

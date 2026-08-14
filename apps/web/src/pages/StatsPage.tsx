@@ -9,6 +9,12 @@ const RANKING_SIZE = 10
 const pct = (correct: number, total: number) =>
   total > 0 ? `${Math.round((correct / total) * 100)}%` : '—'
 
+/** 自分が入っていないサーバーは名前を引けないため、IDを晒さず「他のサーバー」と表示する。 */
+function guildLabel(id: string, guildName: (id: string) => string): string {
+  const name = guildName(id)
+  return name === id ? '他のサーバー' : name
+}
+
 export function StatsPage() {
   const { me, guildId, guildName, reloadMe } = useGuild()
   if (!guildId)
@@ -120,10 +126,16 @@ function Rankings({ guildId }: { guildId: string }) {
 }
 
 function PerQuizStats({ guildId }: { guildId: string }) {
+  const { guildName } = useGuild()
   const quizzes = useApi<Quiz[]>(`/api/quizzes?guild_id=${guildId}`)
   const [quizId, setQuizId] = useState<string>('')
+  const [allGuilds, setAllGuilds] = useState(false)
+
+  // 全サーバー集計は作成者だけが見られるため、他人のクイズに切り替えたら戻す
+  const isOwner = quizzes.data?.find((q) => q.id === quizId)?.isOwner ?? false
+  const scoped = allGuilds && isOwner
   const stats = useApi<QuizStats>(
-    quizId ? `/api/quizzes/${quizId}/stats?guild_id=${guildId}` : null,
+    quizId ? `/api/quizzes/${quizId}/stats?guild_id=${guildId}${scoped ? '&scope=all' : ''}` : null,
   )
 
   return (
@@ -144,27 +156,77 @@ function PerQuizStats({ guildId }: { guildId: string }) {
           ))}
         </Select>
       )}
+      {quizId && isOwner && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-navy-300">集計範囲</span>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => setAllGuilds(false)}
+              className={`rounded border px-2 py-1 font-bold ${scoped ? 'border-paper-line text-navy-600' : 'border-gold-400 bg-gold-100 text-gold-600'}`}
+            >
+              このサーバー
+            </button>
+            <button
+              type="button"
+              onClick={() => setAllGuilds(true)}
+              className={`rounded border px-2 py-1 font-bold ${scoped ? 'border-gold-400 bg-gold-100 text-gold-600' : 'border-paper-line text-navy-600'}`}
+            >
+              全サーバー
+            </button>
+          </div>
+          <span className="text-xs text-navy-200">作成者のみ</span>
+        </div>
+      )}
       {quizId && stats.loading && <Spinner />}
       {quizId && !stats.loading && stats.error && <ErrorNote message={stats.error} />}
       {quizId && !stats.loading && !stats.error && stats.data && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <p className="text-sm text-navy-700">
-            全体: {stats.data.totalAttempts}回答 / 正答率{' '}
+            {scoped ? '全サーバー合計' : 'このサーバー'}: {stats.data.totalAttempts}回答 / 正答率{' '}
             {pct(stats.data.correctCount, stats.data.totalAttempts)} / 参加者{' '}
             {stats.data.uniqueUserCount}人
           </p>
-          <ul className="space-y-1 text-sm">
-            {stats.data.questions.map((q, i) => (
-              <li key={q.questionId} className="flex justify-between gap-2">
-                <span className="min-w-0 truncate">
-                  {i + 1}. {q.body}
-                </span>
-                <span className="shrink-0 whitespace-nowrap text-navy-300">
-                  {pct(q.correctCount, q.totalAttempts)}（{q.totalAttempts}回）
-                </span>
-              </li>
-            ))}
-          </ul>
+          <p className="text-sm text-navy-300">🌐 {stats.data.shareCount}サーバーが追加中</p>
+
+          {stats.data.byGuild && (
+            <div className="space-y-1">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-navy-300">
+                サーバー別
+              </h3>
+              {stats.data.byGuild.length === 0 ? (
+                <p className="text-sm text-navy-300">まだどのサーバーでもプレイされていません。</p>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {stats.data.byGuild.map((g) => (
+                    <li key={g.guildId} className="flex justify-between gap-2">
+                      <span className="min-w-0 truncate">{guildLabel(g.guildId, guildName)}</span>
+                      <span className="shrink-0 whitespace-nowrap text-navy-300">
+                        {pct(g.correctCount, g.totalAttempts)}（{g.totalAttempts}回 /{' '}
+                        {g.uniqueUserCount}人）
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-navy-300">設問別</h3>
+            <ul className="space-y-1 text-sm">
+              {stats.data.questions.map((q, i) => (
+                <li key={q.questionId} className="flex justify-between gap-2">
+                  <span className="min-w-0 truncate">
+                    {i + 1}. {q.body}
+                  </span>
+                  <span className="shrink-0 whitespace-nowrap text-navy-300">
+                    {pct(q.correctCount, q.totalAttempts)}（{q.totalAttempts}回）
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </Card>
