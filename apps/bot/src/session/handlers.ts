@@ -238,45 +238,54 @@ export function handleSessionFtOpen(c: ComponentContext<{ Bindings: Bindings }>)
 }
 
 /**
- * 自由記述: モーダル送信。モーダルは元メッセージを更新できないためRESTで編集する。
- * 「DO更新 → 別メッセージのREST編集」と処理が長く、同期応答だと3秒の期限を超えて
- * 出題が進まない（前の問題が残る）ことがある。先に defer でACKし、続きを遅延実行する。
+ * メッセージのボタンから開いたモーダルは、応答で元メッセージを更新できる（type 7）。
+ * discord-hono の ModalContext は resUpdate を持たないため、応答を直接組み立てる。
  */
-export function handleSessionFtModal(c: ModalContext<{ Bindings: Bindings }>) {
+function updateSourceMessage(rendered: {
+  embeds: Embed[]
+  components: Components | null
+}): Response {
+  return new Response(
+    JSON.stringify({
+      type: 7,
+      data: {
+        embeds: rendered.embeds.map((e) => e.toJSON()),
+        components: rendered.components ? rendered.components.toJSON() : [],
+        // 勝者や順位に <@id> が入るため、通知が飛ばないようにする
+        allowed_mentions: { parse: [] },
+      },
+    }),
+    { headers: { 'content-type': 'application/json' } },
+  )
+}
+
+/**
+ * 自由記述: モーダル送信。
+ * ボタン回答と同じく応答自体で出題メッセージを更新する。以前はBotトークンでの
+ * チャンネルメッセージ編集に頼っていたが、出題メッセージはInteraction応答として
+ * 作られており、その経路の編集が通らないと設問だけ進んで表示が取り残された。
+ */
+export async function handleSessionFtModal(c: ModalContext<{ Bindings: Bindings }>) {
   const [questionId, messageId] = (c.var.custom_id ?? '').split(':')
   const text = (c.var as Record<string, string | undefined>)[FT_INPUT] ?? ''
   const { actor, channelId, stub } = stubFromComponent(c)
+  const outcome = await stub.answer(actor.userId, questionId ?? '', { kind: 'text', text })
 
-  return c.ephemeral().resDefer(async (c) => {
-    try {
-      const outcome = await stub.answer(actor.userId, questionId ?? '', { kind: 'text', text })
+  if (outcome.kind === 'ignored')
+    return c.ephemeral().res(IGNORED_MESSAGE[outcome.reason] ?? 'エラー')
+  if (outcome.kind === 'buzz-wrong') return c.ephemeral().res('不正解… 早い者勝ちです。')
 
-      if (outcome.kind === 'ignored') {
-        await c.followup(IGNORED_MESSAGE[outcome.reason] ?? 'エラー')
-        return
-      }
-      if (outcome.kind === 'buzz-wrong') {
-        await c.followup('不正解… 早い者勝ちです。')
-        return
-      }
+  // モーダルの由来メッセージ＝出題メッセージ。custom_id 経由の値より信頼できる
+  const sourceMessageId = (c.interaction as { message?: { id?: string } }).message?.id
+  const rendered = renderAdvance(outcome, sourceMessageId ?? messageId ?? '')
+  if (sourceMessageId) return updateSourceMessage(rendered)
 
-      const rendered = renderAdvance(outcome, messageId ?? '')
-      if (messageId) {
-        await editChannelMessage(c.env.DISCORD_TOKEN, channelId, messageId, {
-          embeds: rendered.embeds.map((e) => e.toJSON()),
-          components: rendered.components ? rendered.components.toJSON() : [],
-        })
-      }
-      await c.followup(
-        outcome.kind === 'buzz-win'
-          ? '正解！🎉'
-          : outcome.kind === 'buzz-all-wrong'
-            ? '不正解… 全員が回答したので次の問題へ進みます。'
-            : '回答を記録しました。',
-      )
-    } catch (error) {
-      console.error('handleSessionFtModal failed', error)
-      await c.followup('回答の処理に失敗しました。もう一度お試しください。')
-    }
-  })
+  // 由来メッセージを辿れない場合の保険。RESTで編集し、本人には結果だけ返す
+  if (messageId) {
+    await editChannelMessage(c.env.DISCORD_TOKEN, channelId, messageId, {
+      embeds: rendered.embeds.map((e) => e.toJSON()),
+      components: rendered.components ? rendered.components.toJSON() : [],
+    })
+  }
+  return c.ephemeral().res(outcome.kind === 'buzz-win' ? '正解！🎉' : '回答を記録しました。')
 }
