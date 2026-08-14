@@ -287,16 +287,15 @@ export function buildAdvanceHeader(input: {
       ],
     })
   }
-  const title =
-    input.kind === 'buzz-win' ? `<@${input.winnerId}> が正解！` : input.correct ? '正解' : '不正解'
+  // 判定はタイトルで示すため、フィールドには繰り返さない
   // Embed.fields は追記ではなく置換のため、一度に渡す
   return panelEmbed({
-    title: input.kind === 'buzz-win' ? '前問の結果' : title,
+    title: input.kind === 'buzz-win' ? '前問の結果' : input.correct ? '正解' : '不正解',
     color: input.kind === 'buzz-win' || input.correct ? COLOR.correct : COLOR.wrong,
     fields: [
       ...(input.kind === 'buzz-win'
         ? [{ name: '勝者', value: `<@${input.winnerId}>`, inline: true }]
-        : [{ name: '判定', value: title, inline: true }]),
+        : []),
       { name: '正解', value: answers || '—', inline: true },
       ...(input.explanation ? [{ name: '解説', value: input.explanation }] : []),
     ],
