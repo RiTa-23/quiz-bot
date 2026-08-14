@@ -56,6 +56,8 @@ type State = {
   messageId: string | null
   // draft
   quizId: string | null
+  // 結果表示に使う。開始時に確定させる（デプロイを跨いだ既存セッションには無い）
+  quizTitle?: string | null
   page: number
   count: number
   mode: Mode
@@ -334,6 +336,7 @@ export class QuizSession extends DurableObject<Bindings> {
     }
 
     const picked = shuffle(all).slice(0, Math.min(s.count, all.length)).map(toSessionQuestion)
+    s.quizTitle = (await this.view()).selectedQuizTitle
     s.questions = picked
     s.index = 0
     s.status = 'active'
@@ -369,14 +372,29 @@ export class QuizSession extends DurableObject<Bindings> {
     const nextIndex = s.index + 1
     if (nextIndex >= s.questions.length) {
       s.status = 'finished'
+      const quizTitle = s.quizTitle ?? null
       if (s.mode === 'solo') {
         return {
           done: true,
-          summary: { mode: 'solo', correct: s.soloCorrect, total: s.questions.length },
+          summary: {
+            mode: 'solo',
+            correct: s.soloCorrect,
+            total: s.questions.length,
+            quizTitle,
+          },
         }
       }
       const scores = Object.entries(s.buzzScores).map(([userId, score]) => ({ userId, score }))
-      return { done: true, summary: { mode: 'buzz', total: s.questions.length, scores } }
+      return {
+        done: true,
+        summary: {
+          mode: 'buzz',
+          total: s.questions.length,
+          scores,
+          quizTitle,
+          participantCount: s.participants?.length ?? 0,
+        },
+      }
     }
     s.index = nextIndex
     const q = s.questions[nextIndex] as SessionQuestion

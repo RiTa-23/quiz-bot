@@ -38,8 +38,14 @@ export type LobbyView = {
 }
 
 export type SummaryData =
-  | { mode: 'solo'; correct: number; total: number }
-  | { mode: 'buzz'; total: number; scores: { userId: string; score: number }[] }
+  | { mode: 'solo'; correct: number; total: number; quizTitle: string | null }
+  | {
+      mode: 'buzz'
+      total: number
+      scores: { userId: string; score: number }[]
+      quizTitle: string | null
+      participantCount: number
+    }
 
 /** 次の一手（次の設問 or 終了サマリ）。 */
 export type NextStep =
